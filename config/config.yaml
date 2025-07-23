@@ -1,0 +1,3 @@
+Audio_file_name: output/audio_tts.wav
+video_server: pexel
+output_video_file_name: output/rendered_video.mp4
