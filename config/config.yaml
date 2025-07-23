@@ -1,3 +1,10 @@
+video_time_length: 120
+words_per_minute: 210
 Audio_file_name: output/audio_tts.wav
 video_server: pexel
 output_video_file_name: output/rendered_video.mp4
+script_generation_prompt_path: config/script_generation_prompt.txt
+model_name: gpt-4o-mini
+whisper_model_size: base
+max_caption_size: 15
+language: vi

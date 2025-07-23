@@ -1,57 +1,88 @@
+import sys
+sys.path.append("")
+
 import os
+from typing import Dict, Any
 from openai import OpenAI
 import json
+from src.Utils.utils import read_config
 from dotenv import load_dotenv
+
 load_dotenv()
 
-
-OPENAI_API_KEY = os.getenv('OPENAI_KEY')
-model = "gpt-4o"
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-def generate_script(topic):
-    prompt = (
-        """You are a seasoned content writer for a YouTube Shorts channel, specializing in facts videos. 
-        Your facts shorts are concise, each lasting less than 50 seconds (approximately 140 words). 
-        They are incredibly engaging and original. When a user requests a specific type of facts short, you will create it.
-
-        For instance, if the user asks for:
-        Weird facts
-        You would produce content like this:
-
-        Weird facts you don't know:
-        - Bananas are berries, but strawberries aren't.
-        - A single cloud can weigh over a million pounds.
-        - There's a species of jellyfish that is biologically immortal.
-        - Honey never spoils; archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still edible.
-        - The shortest war in history was between Britain and Zanzibar on August 27, 1896. Zanzibar surrendered after 38 minutes.
-        - Octopuses have three hearts and blue blood.
-
-        You are now tasked with creating the best short script based on the user's requested type of 'facts'.
-
-        Keep it brief, highly interesting, and unique.
-
-        Stictly output the script in a JSON format like below, and only provide a parsable JSON object with the key 'script'.
-
-        # Output
-        {"script": "Here is the script ..."}
+class ScriptGenerator:
+    """Generates TikTok video scripts inspired by books using OpenAI's API."""
+    
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize ScriptGenerator with configuration.
+        
+        Args:
+            config (Dict[str, Any]): Configuration dictionary from config.yaml
         """
-    )
+        self.config = config
+        self.script_prompt_path = config.get('script_generation_prompt_path', 'config/script_generation_prompt.txt')
+        self.model_name = config.get('model_name', 'gpt-4o-mini')
+        self.video_time_length = config.get('video_time_length', 60)
+        self.words_per_minute = config.get('words_per_minute', 140)
+        self.number_of_words = int(self.video_time_length * (self.words_per_minute / 60))
+        
+        self.api_key = os.getenv('OPENAI_KEY')
+        if not self.api_key:
+            raise ValueError("OPENAI_KEY environment variable not set")
+        self.client = OpenAI(api_key=self.api_key)
+        
+        try:
+            with open(self.script_prompt_path, 'r', encoding='utf-8') as file:
+                self.prompt = file.read().format(
+                    video_time_length=self.video_time_length,
+                    number_of_words=self.number_of_words
+                )
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Prompt file not found at {self.script_prompt_path}")
 
-    response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": topic}
-            ]
-        )
-    content = response.choices[0].message.content
+    def generate_script(self, topic: str) -> str:
+        """Generate a script for the given topic using OpenAI API.
+        
+        Args:
+            topic (str): Topic or book title for script generation
+            
+        Returns:
+            str: Generated script
+            
+        Raises:
+            ValueError: If API response is invalid or JSON parsing fails
+            Exception: For other API-related errors
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": self.prompt},
+                    {"role": "user", "content": topic}
+                ]
+            )
+            content = response.choices[0].message.content.strip()
+
+            try:
+                if content.lower().startswith("script:"):
+                    script_text = content[len("script:"):].strip()
+                    script = json.loads(json.dumps({"script": script_text}))["script"]
+                else:
+                    raise ValueError("Response does not start with 'script:'")
+            except Exception as e:
+                raise ValueError(f"Failed to parse script from response: {e}")
+
+            return script
+            
+        except Exception as e:
+            raise Exception(f"Failed to generate script: {str(e)}")
+
+if __name__ == "__main__":
     try:
-        script = json.loads(content)["script"]
+        config = read_config(path='config/config.yaml')
+        generator = ScriptGenerator(config)
+        test_topic = "Đắc nhân tâm"
+        script = generator.generate_script(test_topic)
+        print(f"Generated script for '{test_topic}':\n{script}")
     except Exception as e:
-        json_start_index = content.find('{')
-        json_end_index = content.rfind('}')
-        print(content)
-        content = content[json_start_index:json_end_index+1]
-        script = json.loads(content)["script"]
-    return script
+        print(f"Error: {str(e)}")

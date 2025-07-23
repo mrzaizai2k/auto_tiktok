@@ -4,4 +4,4 @@ install:
 	pip install -r requirements.txt
 
 test:
-	python src/app.py "cat brain"
+	python src/app.py "Đắc Nhân Tâm"
