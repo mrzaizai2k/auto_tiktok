@@ -17,6 +17,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     topic = args.topic
+
     config = read_config(path='config/config.yaml')
     Audio_file_name = config['Audio_file_name']
     output_video_file_name = config['output_video_file_name']
@@ -25,15 +26,15 @@ if __name__ == "__main__":
     check_path(Audio_file_name)
     check_path(output_video_file_name)
 
-    response = generate_script(topic)
-    print("script: {}".format(response))
+    script = generate_script(topic)
+    print("script: {}".format(script))
 
-    asyncio.run(generate_audio(response, Audio_file_name))
+    asyncio.run(generate_audio(script, Audio_file_name))
 
     timed_captions = generate_timed_captions(Audio_file_name)
     print("timed_captions:\n",timed_captions)
 
-    search_terms = getVideoSearchQueriesTimed(response, timed_captions)
+    search_terms = getVideoSearchQueriesTimed(script, timed_captions)
     print("search_terms:\n",search_terms)
 
     background_video_urls = None
