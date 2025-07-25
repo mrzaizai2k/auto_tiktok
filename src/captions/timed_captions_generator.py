@@ -20,7 +20,7 @@ class CaptionGenerator:
             ValueError: If required config parameters are missing
             FileNotFoundError: If Whisper model fails to load
         """
-        self.config = config
+        self.config = config['caption_generator']
         self.model_size = config.get('whisper_model_size', 'base')
         self.max_caption_size = config.get('max_caption_size', 15)
         self.consider_punctuation = config.get('consider_punctuation', False)
@@ -240,7 +240,7 @@ if __name__ == "__main__":
     try:
         config = read_config(path='config/config.yaml')
         generator = CaptionGenerator(config)
-        test_audio = "output/audio_tts.wav"  # Replace with actual Vietnamese audio file path
+        test_audio = "output/audio_tts_test.wav"  # Replace with actual Vietnamese audio file path
     
         captions = generator.generate_timed_captions(test_audio)
         print(f"Generated captions for '{test_audio}':")

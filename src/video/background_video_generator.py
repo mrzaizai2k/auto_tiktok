@@ -1,94 +1,168 @@
 import sys
 sys.path.append("")
 
-import os 
+import os
+from typing import List, Tuple, Dict, Optional
 import requests
+from src.Utils.utils import read_config
 from dotenv import load_dotenv
+
 load_dotenv()
 
-PEXELS_API_KEY = os.getenv('PEXELS_KEY')
-# PEXELS_API_KEY = os.environ.get('PEXELS_KEY')
+class VideoSearch:
+    """A class to search and retrieve video URLs from Pexels API based on configuration."""
+    
+    def __init__(self, config: Dict):
+        """Initialize VideoSearch with configuration.
+        
+        Args:
+            config (Dict): Configuration dictionary containing API settings and parameters.
+        
+        Raises:
+            KeyError: If required configuration parameters are missing.
+            ValueError: If configuration values are invalid.
+        """
+        self.pexels_key: str = os.getenv('PEXELS_KEY')
+        if not self.pexels_key:
+            raise ValueError("PEXELS_KEY not found in environment variables")
+        
+        try:
+            self.config = config["video_search"]
+            self.api_url = self.config['url']
+            self.per_page = self.config['per_page']
+            self.target_duration = self.config['target_duration']
+            self.video_width = self.config['video_width']
+            self.video_height = self.config['video_height']
+            self.user_agent = self.config['user_agent']
+        except KeyError as e:
+            raise KeyError(f"Missing configuration key: {e}")
 
-def search_videos(query_string, orientation_landscape=True):
-   
-    url = "https://api.pexels.com/videos/search"
-    headers = {
-        "Authorization": PEXELS_API_KEY,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-    params = {
-        "query": query_string,
-        "orientation": "landscape" if orientation_landscape else "portrait",
-        "per_page": 15
-    }
+    def search_videos(self, query: str) -> Dict:
+        """Search videos on Pexels API.
+        
+        Args:
+            query (str): Search query string.
+        
+        Returns:
+            Dict: API response JSON.
+        
+        Raises:
+            requests.RequestException: If API request fails.
+        """
+        headers = {
+            "Authorization": self.pexels_key,
+            "User-Agent": self.user_agent
+        }
+        if self.video_width > self.video_height:
+            orientation = "landscape"
+        else:
+            orientation = "portrait"
 
-    response = requests.get(url, headers=headers, params=params)
-    json_data = response.json()
-   
-    return json_data
+        params = {
+            "query": query,
+            "orientation": orientation,
+            "per_page": self.per_page
+        }
+        
+        try:
+            response = requests.get(self.api_url, headers=headers, params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise requests.RequestException(f"API request failed: {e}")
 
-
-def getBestVideo(query_string, orientation_landscape=True, used_vids=[]):
-    vids = search_videos(query_string, orientation_landscape)
-    videos = vids['videos']  # Extract the videos list from JSON
-
-    # Filter and extract videos with width and height as 1920x1080 for landscape or 1080x1920 for portrait
-    if orientation_landscape:
-        filtered_videos = [video for video in videos if video['width'] >= 1920 and video['height'] >= 1080 and video['width']/video['height'] == 16/9]
-    else:
-        filtered_videos = [video for video in videos if video['width'] >= 1080 and video['height'] >= 1920 and video['height']/video['width'] == 16/9]
-
-    # Sort the filtered videos by duration in ascending order
-    sorted_videos = sorted(filtered_videos, key=lambda x: abs(15-int(x['duration'])))
-
-    # Extract the top 3 videos' URLs
-    for video in sorted_videos:
-        for video_file in video['video_files']:
-            if orientation_landscape:
-                if video_file['width'] == 1920 and video_file['height'] == 1080:
-                    if not (video_file['link'].split('.hd')[0] in used_vids):
-                        return video_file['link']
-            else:
-                if video_file['width'] == 1080 and video_file['height'] == 1920:
-                    if not (video_file['link'].split('.hd')[0] in used_vids):
-                        return video_file['link']
-    print("NO LINKS found for this round of search with query :", query_string)
-    return None
-
-
-def generate_video_url(timed_video_searches,video_server):
-    timed_video_urls = []
-    if video_server == "pexel":
-        used_links = []
-        for t1, t2, search_terms in timed_video_searches:
+    def get_best_video(self, query: str,  
+                    used_vids: List[str] = None) -> Optional[str]:
+        """Get best video URL matching criteria.
+        
+        Args:
+            query (str): Search query string.
+            used_vids (List[str]): List of used video URLs to avoid duplicates.
+        
+        Returns:
+            Optional[str]: Video URL or None if no suitable video found.
+        """
+        used_vids = used_vids or []
+        try:
+            vids = self.search_videos(query)
+            videos = vids.get('videos', [])
             
-            url = ""
+            # Swap width/height for portrait orientation
+            aspect_ratio = self.video_width  / self.video_height
+            
+            filtered_videos = [
+                video for video in videos 
+                if (video['width'] >= self.video_width and 
+                    video['height'] >= self.video_height  and 
+                    abs(video['width']/video['height'] - aspect_ratio) < 0.01)
+            ]
+            
+            sorted_videos = sorted(
+                filtered_videos, 
+                key=lambda x: abs(self.target_duration - int(x['duration']))
+            )
+            
+            for video in sorted_videos:
+                for video_file in video['video_files']:
+                    if (video_file['width'] == self.video_width and 
+                        video_file['height'] == self.video_height and 
+                        video_file['link'].split('.hd')[0] not in used_vids):
+                        return video_file['link']
+            
+            print(f"No suitable videos found for query: {query}")
+            return None
+        except Exception as e:
+            print(f"Error processing videos for query {query}: {e}")
+            return None
+
+    def generate_video_urls(self, timed_video_searches: List[Tuple[float, float, List[str]]], 
+                          video_server: str) -> List[Tuple[List[float], Optional[str]]]:
+        """Generate video URLs for given time ranges and search terms.
+        
+        Args:
+            timed_video_searches (List[Tuple[float, float, List[str]]]): List of tuples with time range and search terms.
+            video_server (str): Video server name (e.g., 'pexel').
+        
+        Returns:
+            List[Tuple[List[float], Optional[str]]]: List of time ranges and video URLs.
+        
+        Raises:
+            ValueError: If unsupported video server is specified.
+        """
+        if video_server.lower() != "pexel":
+            raise ValueError("Unsupported video server specified")
+        
+        timed_video_urls = []
+        used_links = []
+            
+        for t1, t2, search_terms in timed_video_searches:
+            url = None
             for query in search_terms:
-                
-                url = getBestVideo(query, orientation_landscape=False, used_vids=used_links)
+                url = self.get_best_video(query, used_vids=used_links)
                 if url:
                     used_links.append(url.split('.hd')[0])
                     break
             timed_video_urls.append([[t1, t2], url])
-    else: 
-        print("No video server specified or unsupported video server.")
-        return None
-    return timed_video_urls
+        
+        return timed_video_urls
 
 
 if __name__ == "__main__":
-    # Your provided format: (t1, t2, ['terms...'])
-    search_terms = [
-        (0, 4.28, ['impactful book', 'communication change', 'interpersonal interaction']),
-        (4.28, 14.8, ['"How to Win Friends"', 'Dale Carnegie', 'famous author']),
-        (14.8, 17.34, ['true story', 'powerful principles', 'ordinary man']),
-    ]
-
-
-    video_server = "pexel"
-
-    print("=== New 3-tuple format ===")
-    out1 = generate_video_url(search_terms, video_server)
-    for item in out1:
-        print(item)
-
+    try:
+        config = read_config(path='config/config.yaml')
+        video_search = VideoSearch(config)
+        
+        search_terms = [
+            (0, 4.28, ['impactful book', 'communication change', 'interpersonal interaction']),
+            (4.28, 14.8, ['"How to Win Friends"', 'Dale Carnegie', 'famous author']),
+            (14.8, 17.34, ['true story', 'powerful principles', 'ordinary man']),
+        ]
+        
+        video_urls = video_search.generate_video_urls(search_terms, "pexel")
+        
+        print("=== Video URLs ===")
+        for item in video_urls:
+            print(item)
+            
+    except Exception as e:
+        print(f"Error: {e}")

@@ -19,7 +19,7 @@ class ScriptGenerator:
         Args:
             config (Dict[str, Any]): Configuration dictionary from config.yaml
         """
-        self.config = config
+        self.config = config['script_generator']
         self.script_prompt_path = config.get('script_generation_prompt_path', 'config/script_generation_prompt.txt')
         self.model_name = config.get('model_name', 'gpt-4o-mini')
         self.video_time_length = config.get('video_time_length', 60)

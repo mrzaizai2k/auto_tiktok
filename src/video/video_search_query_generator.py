@@ -77,8 +77,8 @@ class VideoKeywordGenerator:
     """Generates visually concrete keywords for video segments based on a plain script (no timestamps)."""
     
     def __init__(self, config: Dict[str, Any]):
-        self.config = config
-        self.model_name = config.get('model', 'gpt-4o-mini')
+        self.config = config['keyword_enerator']
+        self.model_name = config.get('model_name', 'gpt-4o-mini')
         self.temperature = config.get('temperature', 1.0)
         self.video_search_keyword_prompt_path = config.get(
             'video_search_keyword_prompt_path',

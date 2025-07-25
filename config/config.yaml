@@ -1,12 +1,29 @@
-video_time_length: 120
-words_per_minute: 210
 Audio_file_name: output/audio_tts.wav
 video_server: pexel
 output_video_file_name: output/rendered_video.mp4
-script_generation_prompt_path: config/script_generation_prompt.txt
-model_name: gpt-4o-mini
-whisper_model_size: base
-max_caption_size: 15
-language: vi
-video_search_keyword_prompt_path: config/video_search_keyword_prompt.txt
-video_search_time_threshold: 60
+
+script_generator:
+  video_time_length: 120
+  words_per_minute: 210
+  script_generation_prompt_path: config/script_generation_prompt.txt
+  model_name: gpt-4o-mini
+
+caption_generator:
+  whisper_model_size: base
+  max_caption_size: 15
+  language: vi
+  consider_punctuation: false
+
+keyword_enerator:
+  model_name: gpt-4o-mini
+  temperature: 1.0
+  video_search_keyword_prompt_path: config/video_search_keyword_prompt.txt
+
+
+video_search:
+  url: "https://api.pexels.com/videos/search"
+  per_page: 15
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  target_duration: 15
+  video_width: 1080
+  video_height: 1920
