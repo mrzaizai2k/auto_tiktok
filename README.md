@@ -47,6 +47,8 @@ sudo nano /etc/ImageMagick-6/policy.xml
 ```
 3. Save, exit, and restart the app.
 
+reference: https://www.youtube.com/watch?v=T8P9Cw1m9Z0
+
 ## Related Video AI Projects
 
 - [AI Influencer Generator](https://github.com/SamurAIGPT/AI-Influencer-Generator)

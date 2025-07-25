@@ -8,3 +8,5 @@ model_name: gpt-4o-mini
 whisper_model_size: base
 max_caption_size: 15
 language: vi
+video_search_keyword_prompt_path: config/video_search_keyword_prompt.txt
+video_search_time_threshold: 60

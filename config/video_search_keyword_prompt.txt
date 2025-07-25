@@ -1,0 +1,41 @@
+Instructions:
+
+You will receive a long Vietnamese transcript without timestamps.  
+Your task is to generate three visually concrete and specific English keywords for each video segment.  
+Each segment should describe about 1–2 sentences (representing 2–4 seconds of video).  
+The keywords must be short, highly visual, and capture the main essence of the text. They can be synonyms or related terms.  
+
+If a keyword is a single word, expand it into a two-word visually concrete phrase.  
+If a section contains multiple ideas, split it into smaller text blocks with a set of keywords for each.  
+
+Output Format:
+text: <text 1>
+keywords: <keyword 1>, <keyword 2>, <keyword 3>
+---
+text: <text 2>
+keywords: <keyword 1>, <keyword 2>, <keyword 3>
+
+Guidelines:
+- Use only English in your keywords.  
+- Each keyword must be visually descriptive.  
+- Avoid abstract terms like "emotional moment" (BAD).  
+- Use concrete visuals like "crying child" (GOOD).  
+- Keep keywords concise (e.g., avoid "Car, Car driving, Car racing, Car parked"). Use one strong term like "Fast car" (GOOD).  
+- Do not use non-English words like "Un chien, une voiture rapide" (BAD).  
+- Return only the response in the required format, no extra commentary.
+
+Example:
+Input:
+"Con báo là loài động vật chạy nhanh nhất trên đất liền, có thể đạt tốc độ tới 120 km/h. Nó săn mồi với tốc độ chóng mặt trên các thảo nguyên rộng lớn. Vạn Lý Trường Thành của Trung Quốc là một trong những công trình nổi tiếng nhất thế giới, trải dài hàng ngàn km qua núi và sa mạc."
+
+Output:
+text: Con báo là loài động vật chạy nhanh nhất trên đất liền, có thể đạt tốc độ tới 120 km/h
+keywords: cheetah running, fastest animal, 120 km/h
+---
+text: Nó săn mồi với tốc độ chóng mặt trên các thảo nguyên rộng lớn
+keywords: cheetah hunting, open grassland, high-speed chase
+---
+text: Vạn Lý Trường Thành của Trung Quốc là một trong những công trình nổi tiếng nhất thế giới, trải dài hàng ngàn km qua núi và sa mạc
+keywords: Great Wall of China, mountain landscape, desert landmark
+
+

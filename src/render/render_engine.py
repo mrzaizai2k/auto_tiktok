@@ -12,6 +12,8 @@ from moviepy.editor import (AudioFileClip, CompositeVideoClip, CompositeAudioCli
 # from moviepy.audio.fx.audio_normalize import audio_normalize
 import requests
 
+
+
 def download_file(url: str, filename: str) -> bool:
     """
     Downloads a file from the given URL and saves it to the specified filename.
@@ -130,11 +132,13 @@ def get_output_media(
 
         for (t1, t2), text in timed_captions:
             try:
-                text_clip = TextClip(txt=text, fontsize=100, color="white", 
-                                  stroke_width=3, stroke_color="black", method="label")
+                text_clip = TextClip(txt=text, fontsize=70, 
+                                     color="white", 
+                                     font="font/Neue-Einstellung-Bold.ttf",
+                                  stroke_width=2, stroke_color="black", method="label")
                 text_clip = text_clip.set_start(t1)
                 text_clip = text_clip.set_end(t2)
-                text_clip = text_clip.set_position(["center", 800])
+                text_clip = text_clip.set_position(["center", 1800])
                 visual_clips.append(text_clip)
             except Exception as e:
                 print(f"Error creating text clip for '{text}': {e}")

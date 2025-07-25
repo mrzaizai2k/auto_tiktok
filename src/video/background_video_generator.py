@@ -57,19 +57,38 @@ def getBestVideo(query_string, orientation_landscape=True, used_vids=[]):
 
 
 def generate_video_url(timed_video_searches,video_server):
-        timed_video_urls = []
-        if video_server == "pexel":
-            used_links = []
-            for (t1, t2), search_terms in timed_video_searches:
-                url = ""
-                for query in search_terms:
-                  
-                    url = getBestVideo(query, orientation_landscape=False, used_vids=used_links)
-                    if url:
-                        used_links.append(url.split('.hd')[0])
-                        break
-                timed_video_urls.append([[t1, t2], url])
-        elif video_server == "stable_diffusion":
-            timed_video_urls = get_images_for_video(timed_video_searches)
+    timed_video_urls = []
+    if video_server == "pexel":
+        used_links = []
+        for t1, t2, search_terms in timed_video_searches:
+            
+            url = ""
+            for query in search_terms:
+                
+                url = getBestVideo(query, orientation_landscape=False, used_vids=used_links)
+                if url:
+                    used_links.append(url.split('.hd')[0])
+                    break
+            timed_video_urls.append([[t1, t2], url])
+    else: 
+        print("No video server specified or unsupported video server.")
+        return None
+    return timed_video_urls
 
-        return timed_video_urls
+
+if __name__ == "__main__":
+    # Your provided format: (t1, t2, ['terms...'])
+    search_terms = [
+        (0, 4.28, ['impactful book', 'communication change', 'interpersonal interaction']),
+        (4.28, 14.8, ['"How to Win Friends"', 'Dale Carnegie', 'famous author']),
+        (14.8, 17.34, ['true story', 'powerful principles', 'ordinary man']),
+    ]
+
+
+    video_server = "pexel"
+
+    print("=== New 3-tuple format ===")
+    out1 = generate_video_url(search_terms, video_server)
+    for item in out1:
+        print(item)
+
