@@ -15,8 +15,8 @@ class VideoComposer:
         Args:
             config: Configuration dictionary with video parameters.
         """
-        self.config = config
-        self.output_video_file_name = config.get('output_video_file_name', 'rendered_video.mp4')
+        self.config = config['video_composer']
+        self.output_video_path = config.get('output_video_path', 'rendered_video.mp4')
         self.font_path = config.get('font_path', 'font/Neue-Einstellung-Bold.ttf')
         self.font_size = config.get('font_size', 70)
         self.text_color = config.get('text_color', 'white')
@@ -154,18 +154,18 @@ class VideoComposer:
 
             try:
                 video.write_videofile(
-                    self.output_video_file_name,
+                    self.output_video_path,
                     codec=self.video_codec,
                     audio_codec=self.audio_codec,
                     fps=self.fps,
                     preset=self.preset
                 )
             except Exception as e:
-                print(f"Error writing video file {self.output_video_file_name}: {e}")
+                print(f"Error writing video file {self.output_video_path}: {e}")
                 return None
 
             self._cleanup_temp_files(background_video_urls)
-            return self.output_video_file_name
+            return self.output_video_path
 
         except Exception as e:
             print(f"Unexpected error in compose_video: {e}")

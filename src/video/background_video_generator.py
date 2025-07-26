@@ -22,9 +22,9 @@ class VideoSearch:
             KeyError: If required configuration parameters are missing.
             ValueError: If configuration values are invalid.
         """
-        self.pexels_key: str = os.getenv('PEXELS_KEY')
-        if not self.pexels_key:
-            raise ValueError("PEXELS_KEY not found in environment variables")
+        self.pexels_api_key: str = os.getenv('PEXELS_API_KEY')
+        if not self.pexels_api_key:
+            raise ValueError("PEXELS_API_KEY not found in environment variables")
         
         try:
             self.config = config["video_search"]
@@ -50,7 +50,7 @@ class VideoSearch:
             requests.RequestException: If API request fails.
         """
         headers = {
-            "Authorization": self.pexels_key,
+            "Authorization": self.pexels_api_key,
             "User-Agent": self.user_agent
         }
         if self.video_width > self.video_height:

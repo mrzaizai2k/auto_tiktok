@@ -1,12 +1,17 @@
 import sys
 sys.path.append("")
 
-from src.Utils.utils import read_config
 import edge_tts
+from src.Utils.utils import read_config
 
-async def generate_audio(text,outputFilename):
-    communicate = edge_tts.Communicate(text,"vi-VN-NamMinhNeural") #vi-VN-HoaiMyNeural #vi-VN-NamMinhNeural
-    await communicate.save(outputFilename)
+async def generate_audio(config, text:str= "Hello"):
+    """Generate audio from text using Edge TTS."""
+    audio_config = config['audio_generator']
+    output_audio_path = audio_config['output_audio_path']  # Replace with actual audio file path
+    voice = audio_config['voice']  # Replace with actual voice name, e.g., "vi-VN-NamMinhNeural"
+    communicate = edge_tts.Communicate(text,voice=voice) 
+
+    await communicate.save(output_audio_path)
 
 
 if __name__ == "__main__":
@@ -15,7 +20,7 @@ if __name__ == "__main__":
     test_audio_path = config['test_audio_path']  # Replace with actual Vietnamese audio file path
     test_script = config['test_script']  
 
-    asyncio.run(generate_audio(test_script, test_audio_path))
+    asyncio.run(generate_audio(text = test_script, config=config))
     print(f"Audio saved to {test_audio_path}")
 
 

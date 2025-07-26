@@ -1,6 +1,6 @@
-Audio_file_name: output/audio_tts.wav
+output_audio_path: output/audio_tts.wav
 video_server: pexel
-output_video_file_name: output/rendered_video.mp4
+output_video_path: output/rendered_video.mp4
 
 script_generator:
   video_time_length: 60
@@ -28,14 +28,18 @@ video_search:
   video_height: 1920
 
 video_composer:
-  output_video_file_name: ${output_video_file_name}
+  output_video_path: ${output_video_path}
   font_path: "font/Neue-Einstellung-Bold.ttf"
-  font_size: 70
+  font_size: 120
   text_color: "white"
   stroke_width: 2
   stroke_color: "black"
-  text_position: ["center", 1800]
+  text_position: ["center", 1600]
   video_codec: "libx264"
   audio_codec: "aac"
   fps: 25
   preset: "veryfast"
+
+audio_generator:
+  voice: "vi-VN-NamMinhNeural" #vi-VN-HoaiMyNeural #vi-VN-NamMinhNeural
+  output_audio_path: ${output_audio_path}

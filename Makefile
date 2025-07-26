@@ -1,7 +1,17 @@
 install:
 	conda create -n text2vid python=3.10 -y
+	conda init
 	conda activate text2vid
 	pip install -r requirements.txt
 
 run:
 	python src/app.py "Đắc Nhân Tâm"
+
+unit_test:
+
+	python src/script/script_generator.py
+	python src/audio/audio_generator.py
+	python src/captions/timed_captions_generator.py
+	python src/video/video_search_query_generator.py
+	python src/video/background_video_generator.py
+	python src/render/render_engine.py
