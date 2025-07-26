@@ -44,3 +44,8 @@ video_composer:
 audio_generator:
   voice: "vi-VN-NamMinhNeural" #vi-VN-HoaiMyNeural #vi-VN-NamMinhNeural
   output_audio_path: ${output_audio_path}
+
+description_generator:
+  model_name: gpt-4o-mini
+  description_prompt_path: config/video_description_prompt.txt
+  output_description_path: output/description.txt
