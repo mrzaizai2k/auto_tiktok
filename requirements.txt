@@ -48,3 +48,4 @@ urllib3==2.2.1
 whisper-timestamped==1.15.4
 yarl==1.9.4
 groq==0.11.0
+PyYAML

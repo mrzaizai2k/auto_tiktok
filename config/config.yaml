@@ -13,6 +13,7 @@ caption_generator:
   max_caption_size: 15
   language: vi
   consider_punctuation: false
+  srt_file_path: output/captions.srt #Can be None
 
 keyword_generator:
   model_name: gpt-4o-mini
@@ -32,9 +33,9 @@ video_composer:
   font_path: "font/Neue-Einstellung-Bold.ttf"
   font_size: 120
   text_color: "white"
-  stroke_width: 2
+  stroke_width: 4
   stroke_color: "black"
-  text_position: ["center", 1600]
+  text_position: ["center", 1200]
   video_codec: "libx264"
   audio_codec: "aac"
   fps: 25

@@ -33,8 +33,8 @@ if __name__ == "__main__":
     asyncio.run(generate_audio(text=script, config=config))
 
     caption_generator = CaptionGenerator(config)
-    timed_captions = caption_generator.generate_timed_captions(output_audio_path)
-    timed_captions = correct_timed_captions(script, timed_captions)
+    timed_captions = caption_generator.generate_timed_captions(audio_filename=output_audio_path,
+                                                               script_text=script)
     print("timed_captions:\n",timed_captions)
 
     keyword_generator = VideoKeywordGenerator(config)

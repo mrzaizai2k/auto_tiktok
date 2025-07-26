@@ -6,5 +6,5 @@ __pycache__/
 *.wav
 *.mp4
 *.mp3
-.output
+output/
 *.ttf

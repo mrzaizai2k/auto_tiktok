@@ -15,11 +15,11 @@ clip = (
 txt_clip = TextClip(
     font="font/Neue-Einstellung-Bold.ttf",
     txt="Đắc nhân tâm",
-    fontsize=100, color="white",
-    stroke_width=2, stroke_color="black", method="label"
+    fontsize=120, color="white",
+    stroke_width=4, stroke_color="black", method="label"
     ).set_duration(2)
 
-txt_clip = txt_clip.set_position(["center", 1800])
+txt_clip = txt_clip.set_position(["center", 1200])
 
 # Overlay the text clip on the first video clip
 final_video = CompositeVideoClip([clip, txt_clip])

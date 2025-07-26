@@ -5,10 +5,10 @@ from typing import Dict, Any, List, Tuple
 from whisper_timestamped import load_model, transcribe_timestamped
 import re
 import os
-from src.Utils.utils import read_config
+from src.Utils.utils import read_config, levenshtein_distance
 
 class CaptionGenerator:
-    """Generates timed captions from audio using Whisper model based on configuration."""
+    """Generates timed captions from audio using Whisper model and creates SRT file if configured."""
     
     def __init__(self, config: Dict[str, Any]):
         """Initialize CaptionGenerator with configuration.
@@ -25,6 +25,7 @@ class CaptionGenerator:
         self.max_caption_size = config.get('max_caption_size', 15)
         self.consider_punctuation = config.get('consider_punctuation', False)
         self.language = config.get('language', 'vi')  # Vietnamese as default
+        self.srt_file_path = self.config.get('srt_file_path', None)
         
         try:
             self.whisper_model = load_model(self.model_size)
@@ -98,11 +99,12 @@ class CaptionGenerator:
                 return value
         return None
 
-    def generate_timed_captions(self, audio_filename: str) -> List[Tuple[Tuple[float, float], str]]:
-        """Generate timed captions from audio file.
+    def generate_timed_captions(self, audio_filename: str, script_text: str = None) -> List[Tuple[Tuple[float, float], str]]:
+        """Generate timed captions from audio file and optionally correct with script text.
         
         Args:
             audio_filename (str): Path to audio file
+            script_text (str, optional): Script text for correction
             
         Returns:
             List[Tuple[Tuple[float, float], str]]: List of (time range, caption) pairs
@@ -126,7 +128,7 @@ class CaptionGenerator:
             word_location_to_time = self.get_timestamp_mapping(whisper_analysis)
             position = 0
             start_time = 0
-            captions_pairs = []
+            captions = []
             text = whisper_analysis['text']
             
             if self.consider_punctuation:
@@ -140,101 +142,110 @@ class CaptionGenerator:
                 position += len(word) + 1
                 end_time = self.interpolate_time_from_dict(position, word_location_to_time)
                 if end_time and word:
-                    captions_pairs.append(((start_time, end_time), word))
+                    captions.append(((start_time, end_time), word))
                     start_time = end_time
 
-            return captions_pairs
+            if script_text:
+                captions = self.correct_timed_captions(script_text, captions)
+            
+            if self.srt_file_path:
+                self.generate_srt_file(captions, self.srt_file_path)
+            
+            return captions
             
         except Exception as e:
             raise ValueError(f"Failed to generate captions: {str(e)}")
-def levenshtein_distance(s1: str, s2: str) -> int:
-    """Calculate Levenshtein distance between two strings.
-    
-    Args:
-        s1 (str): First string
-        s2 (str): Second string
+
+    def correct_timed_captions(self, script_text: str, captions: List[Tuple[Tuple[float, float], str]]) -> List[Tuple[Tuple[float, float], str]]:
+        """Correct timed captions to match the provided script text while preserving original timestamps.
         
-    Returns:
-        int: Levenshtein distance
-    """
-    if len(s1) < len(s2):
-        return levenshtein_distance(s2, s1)
-    if len(s2) == 0:
-        return len(s1)
-    previous_row = range(len(s2) + 1)
-    for i, c1 in enumerate(s1):
-        current_row = [i + 1]
-        for j, c2 in enumerate(s2):
-            insertions = previous_row[j + 1] + 1
-            deletions = current_row[j] + 1
-            substitutions = previous_row[j] + (c1 != c2)
-            current_row.append(min(insertions, deletions, substitutions))
-        previous_row = current_row
-    return previous_row[-1]
+        Args:
+            script_text (str): The correct script text to align captions with
+            captions (List[Tuple[Tuple[float, float], str]]): List of timed captions
+            
+        Returns:
+            List[Tuple[Tuple[float, float], str]]: Corrected list of (time range, caption) pairs
+            
+        Raises:
+            ValueError: If inputs are invalid or processing fails
+        """
+        try:
+            if not script_text or not isinstance(script_text, str):
+                raise ValueError("Script text must be a non-empty string")
+            if not captions or not isinstance(captions, list):
+                raise ValueError("Captions must be a non-empty list of timed caption tuples")
 
-def correct_timed_captions(script_text: str, captions: List[Tuple[Tuple[float, float], str]]) -> List[Tuple[Tuple[float, float], str]]:
-    """Corrects timed captions to match the provided script text while preserving original timestamps and phrase structure.
-    
-    Args:
-        script_text (str): The correct script text to align captions with.
-        captions (List[Tuple[Tuple[float, float], str]]): List of timed captions from Whisper transcription.
+            cleaned_script = re.sub(r'[^\w\s]', '', script_text).strip()
+            script_words = cleaned_script.split()
+            if not script_words:
+                raise ValueError("Script text contains no valid words after cleaning")
+
+            corrected_captions = []
+            for timestamp, caption in captions:
+                caption_words = caption.split()
+                num_words = len(caption_words)
+                if num_words == 0:
+                    corrected_captions.append((timestamp, caption))
+                    continue
+
+                best_match = ""
+                best_score = -1
+                best_start_idx = 0
+
+                for i in range(len(script_words) - num_words + 1):
+                    candidate_segment = ' '.join(script_words[i:i + num_words])
+                    similarity = levenshtein_distance(caption.lower(), candidate_segment.lower())
+                    max_length = max(len(caption), len(candidate_segment))
+                    similarity_score = 1 - (similarity / max_length) if max_length > 0 else 0
+                    
+                    if similarity_score > best_score:
+                        best_score = similarity_score
+                        best_match = candidate_segment
+                        best_start_idx = i
+
+                if best_score < 0.4:
+                    corrected_captions.append((timestamp, caption))
+                else:
+                    corrected_captions.append((timestamp, best_match))
+
+            return corrected_captions
+
+        except Exception as e:
+            raise ValueError(f"Failed to correct captions: {str(e)}")
+
+    def generate_srt_file(self, captions: List[Tuple[Tuple[float, float], str]], srt_file_path: str) -> None:
+        """Generate an SRT file from timed captions.
         
-    Returns:
-        List[Tuple[Tuple[float, float], str]]: Corrected list of (time range, caption) pairs.
+        Args:
+            captions (List[Tuple[Tuple[float, float], str]]): List of (time range, caption) pairs
+            srt_file_path (str): Path to save the SRT file
+            
+        Raises:
+            ValueError: If SRT file creation fails
+        """
+        try:
+            with open(srt_file_path, 'w', encoding='utf-8') as f:
+                for i, ((start, end), caption) in enumerate(captions, 1):
+                    start_time = self._format_srt_time(start)
+                    end_time = self._format_srt_time(end)
+                    f.write(f"{i}\n{start_time} --> {end_time}\n{caption}\n\n")
+        except Exception as e:
+            raise ValueError(f"Failed to create SRT file: {str(e)}")
+
+    def _format_srt_time(self, seconds: float) -> str:
+        """Format time in seconds to SRT time format (HH:MM:SS,mmm).
         
-    Raises:
-        ValueError: If inputs are invalid or processing fails.
-    """
-    try:
-        if not script_text or not isinstance(script_text, str):
-            raise ValueError("Script text must be a non-empty string")
-        if not captions or not isinstance(captions, list):
-            raise ValueError("Captions must be a non-empty list of timed caption tuples")
-
-        # Clean script text (remove punctuation for matching, keep original for output)
-        cleaned_script = re.sub(r'[^\w\s]', '', script_text).strip()
-        script_words = cleaned_script.split()
-        if not script_words:
-            raise ValueError("Script text contains no valid words after cleaning")
-
-        corrected_captions = []
-        for timestamp, caption in captions:
-            # Count number of words in the current caption
-            caption_words = caption.split()
-            num_words = len(caption_words)
-            if num_words == 0:
-                corrected_captions.append((timestamp, caption))
-                continue
-
-            # Find the best matching segment in script text
-            best_match = ""
-            best_score = -1
-            best_start_idx = 0
-
-            # Search through script text for a segment with the same number of words
-            for i in range(len(script_words) - num_words + 1):
-                candidate_segment = ' '.join(script_words[i:i + num_words])
-                similarity = levenshtein_distance(caption.lower(), candidate_segment.lower())
-                max_length = max(len(caption), len(candidate_segment))
-                similarity_score = 1 - (similarity / max_length) if max_length > 0 else 0
-                
-                if similarity_score > best_score:
-                    best_score = similarity_score
-                    best_match = candidate_segment
-                    best_start_idx = i
-
-            # If similarity is too low (e.g., < 0.4), use the original caption to avoid bad matches
-            if best_score < 0.4:
-                corrected_captions.append((timestamp, caption))
-            else:
-                corrected_captions.append((timestamp, best_match))
-                # Optionally remove used words to reduce future mismatches
-                # del script_words[best_start_idx:best_start_idx + num_words]
-
-        return corrected_captions
-
-    except Exception as e:
-        raise ValueError(f"Failed to correct captions: {str(e)}")
+        Args:
+            seconds (float): Time in seconds
+            
+        Returns:
+            str: Formatted time string
+        """
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        secs = int(seconds % 60)
+        millis = int((seconds % 1) * 1000)
+        return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 if __name__ == "__main__":
     try:
@@ -242,20 +253,13 @@ if __name__ == "__main__":
         generator = CaptionGenerator(config)
 
         test_config = read_config(path='config/test_config.yaml')
-        test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
-        test_script = test_config['test_script']  
+        test_audio_path = test_config['test_audio_path']
+        test_script = test_config['test_script']
     
-        captions = generator.generate_timed_captions(test_audio_path)
-        print(f"captions '{captions}':")
+        captions = generator.generate_timed_captions(test_audio_path, test_script)
+        print(f"Captions:")
         for (start, end), caption in captions:
             print(f"[{start:.2f}s - {end:.2f}s]: {caption}")
-
-        # Correct captions
-        corrected_captions = correct_timed_captions(test_script, captions)
-        
-        print("\nCorrected captions:")
-        for caption in corrected_captions:
-            print(f"[{caption[0][0]:.2f}s - {caption[0][1]:.2f}s]: {caption[1]}")
 
     except Exception as e:
         print(f"Error: {str(e)}")
