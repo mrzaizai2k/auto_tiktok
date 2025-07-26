@@ -85,9 +85,9 @@ class VideoKeywordGenerator:
             'config/video_search_keyword_prompt.txt'
         )
         
-        self.api_key = os.getenv('OPENAI_KEY')
+        self.api_key = os.getenv('OPENAI_API_KEY')
         if not self.api_key:
-            raise ValueError("OPENAI_KEY environment variable not set")
+            raise ValueError("OPENAI_API_KEY environment variable not set")
         self.client = OpenAI(api_key=self.api_key)
         
         try:

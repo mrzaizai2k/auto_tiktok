@@ -1,0 +1,40 @@
+name: Auto TikTok Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y make build-essential
+          make install
+
+      - name: Run caption_generator test
+        run: python src/captions/timed_captions_generator.py
+
+      - name: Run scripts test
+        run: python src/script/script_generator.py
+
+      - name: Run keyword_generator test
+        run: python src/video/video_search_query_generator.py
+
+      - name: Run video_urls_search test
+        run: python src/video/background_video_generator.py

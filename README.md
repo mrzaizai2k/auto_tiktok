@@ -1,5 +1,12 @@
 # Text-to-Video AI 🚀
 
+
+![CI/CD](https://github.com/mrzaizai2k/auto_tiktok/actions/workflows/workloads.yaml/badge.svg)
+[![Repo Size](https://img.shields.io/github/repo-size/mrzaizai2k/auto_tiktok?style=flat-square)](https://github.com/mrzaizai2k/auto_tiktok)
+[![License](https://img.shields.io/github/license/mrzaizai2k/auto_tiktok?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Release](https://img.shields.io/github/v/release/mrzaizai2k/auto_tiktok?style=flat-square)](https://github.com/mrzaizai2k/auto_tiktok/releases)
+
+
 Convert text to video using AI - Mrzaizai2k's way
 
 Inspired by [SamurAIGPT/Text-To-Video-AI](https://github.com/SamurAIGPT/Text-To-Video-AI).
@@ -8,8 +15,8 @@ Inspired by [SamurAIGPT/Text-To-Video-AI](https://github.com/SamurAIGPT/Text-To-
 
 1. Create a `.env` file:
 ```
-OPENAI_KEY=your_openai_key
-PEXELS_KEY=your_pexels_key
+OPENAI_API_KEY=your_openai_key
+PEXELS_API_KEY=your_pexels_key
 ```
 
 2. Set up environment:
