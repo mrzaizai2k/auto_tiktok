@@ -158,7 +158,8 @@ if __name__ == "__main__":
             (14.8, 17.34, ['true story', 'powerful principles', 'ordinary man']),
         ]
         
-        video_urls = video_search.generate_video_urls(search_terms, "pexel")
+        video_urls = video_search.generate_video_urls(search_terms, 
+                                                      video_server=config['video_server'])
         
         print("=== Video URLs ===")
         for item in video_urls:

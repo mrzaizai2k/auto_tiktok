@@ -5,8 +5,8 @@ import asyncio
 from src.script.script_generator import ScriptGenerator
 from src.audio.audio_generator import generate_audio
 from src.captions.timed_captions_generator import CaptionGenerator, correct_timed_captions
-from src.video.background_video_generator import generate_video_url
-from src.render.render_engine import get_output_media
+from src.video.background_video_generator import VideoSearch
+from src.render.render_engine import VideoComposer
 from src.video.video_search_query_generator import VideoKeywordGenerator
 import argparse
 from src.Utils.utils import read_config, check_path
@@ -43,7 +43,8 @@ if __name__ == "__main__":
 
     background_video_urls = None
     if search_terms is not None:
-        background_video_urls = generate_video_url(search_terms, video_server)
+        video_search = VideoSearch(config)
+        background_video_urls = video_search.generate_video_urls(search_terms, video_server)
         print("background_video_urls\n",background_video_urls)
     else:
         print("No background video")
@@ -53,8 +54,13 @@ if __name__ == "__main__":
 
 
     if background_video_urls is not None:
-        video = get_output_media(Audio_file_name, timed_captions, background_video_urls, 
-                                 output_video_file_name=output_video_file_name)
+        composer = VideoComposer(config)
+        video = composer.compose_video(
+            background_video_urls=background_video_urls,
+            audio_file_path=Audio_file_name,
+            timed_captions=timed_captions
+        )
+
         print(video)
     else:
         print("No video")

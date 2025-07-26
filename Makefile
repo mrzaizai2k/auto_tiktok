@@ -3,5 +3,5 @@ install:
 	conda activate text2vid
 	pip install -r requirements.txt
 
-test:
+run:
 	python src/app.py "Đắc Nhân Tâm"

@@ -1,181 +1,197 @@
 import sys
 sys.path.append("")
-
 import os
 import tempfile
-import platform
-import subprocess
-from typing import List, Tuple, Optional
-from moviepy.editor import (AudioFileClip, CompositeVideoClip, CompositeAudioClip,
-                            TextClip, VideoFileClip)
-# from moviepy.audio.fx.audio_loop import audio_loop
-# from moviepy.audio.fx.audio_normalize import audio_normalize
-import requests
+from typing import List, Tuple, Optional, Dict, Any
+from moviepy.editor import AudioFileClip, CompositeVideoClip, CompositeAudioClip, TextClip, VideoFileClip
+from src.Utils.utils import download_file, get_program_path, read_config
 
-
-
-def download_file(url: str, filename: str) -> bool:
-    """
-    Downloads a file from the given URL and saves it to the specified filename.
+class VideoComposer:
+    """Class to create composite videos with optional audio, background videos, and captions."""
     
-    Args:
-        url (str): The URL of the file to download
-        filename (str): The local path to save the downloaded file
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize VideoComposer with configuration.
         
-    Returns:
-        bool: True if download successful, False otherwise
-    """
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"
-        }
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        with open(filename, 'wb') as f:
-            f.write(response.content)
-        print(f"Downloaded {url} to {filename}, size: {os.path.getsize(filename)} bytes")
-        if os.path.exists(filename):
-            print(f"File {filename} exists")
-        return True
-    except requests.RequestException as e:
-        print(f"Error downloading {url}: {e}")
-        return False
-    except OSError as e:
-        print(f"Error writing file {filename}: {e}")
-        return False
+        Args:
+            config: Configuration dictionary with video parameters.
+        """
+        self.config = config
+        self.output_video_file_name = config.get('output_video_file_name', 'rendered_video.mp4')
+        self.font_path = config.get('font_path', 'font/Neue-Einstellung-Bold.ttf')
+        self.font_size = config.get('font_size', 70)
+        self.text_color = config.get('text_color', 'white')
+        self.stroke_width = config.get('stroke_width', 2)
+        self.stroke_color = config.get('stroke_color', 'black')
+        self.text_position = config.get('text_position', ['center', 1800])
+        self.video_codec = config.get('video_codec', 'libx264')
+        self.audio_codec = config.get('audio_codec', 'aac')
+        self.fps = config.get('fps', 25)
+        self.preset = config.get('preset', 'veryfast')
+        self._setup_imagemagick()
 
-def search_program(program_name: str) -> Optional[str]:
-    """
-    Searches for the specified program in the system PATH.
-    
-    Args:
-        program_name (str): Name of the program to search for
-        
-    Returns:
-        Optional[str]: Path to the program if found, None otherwise
-    """
-    try:
-        search_cmd = "where" if platform.system() == "Windows" else "which"
-        return subprocess.check_output([search_cmd, program_name]).decode().strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Error searching for program {program_name}: {e}")
-        return None
-    except UnicodeDecodeError as e:
-        print(f"Error decoding program path for {program_name}: {e}")
-        return None
+    def _setup_imagemagick(self) -> None:
+        """Set up ImageMagick binary path."""
+        try:
+            magick_path = get_program_path("magick")
+            os.environ['IMAGEMAGICK_BINARY'] = magick_path if magick_path else '/usr/bin/convert'
+        except Exception as e:
+            print(f"Error setting up ImageMagick: {e}")
 
-def get_program_path(program_name: str) -> Optional[str]:
-    """
-    Gets the path to the specified program.
-    
-    Args:
-        program_name (str): Name of the program to find
+    def _create_video_clips(self, background_video_data: List[Tuple[Tuple[float, float], str]]) -> List[VideoFileClip]:
+        """Create video clips from background video data.
         
-    Returns:
-        Optional[str]: Path to the program if found, None otherwise
-    """
-    try:
-        program_path = search_program(program_name)
-        return program_path
-    except Exception as e:
-        print(f"Error getting program path for {program_name}: {e}")
-        return None
-
-def get_output_media(
-    audio_file_path: str,
-    timed_captions: List[Tuple[Tuple[float, float], str]],
-    background_video_data: List[Tuple[Tuple[float, float], str]],
-    output_video_file_name: str = "rendered_video.mp4"
-) -> Optional[str]:
-    """
-    Creates a composite video with audio, background videos, and captions.
-    
-    Args:
-        audio_file_path (str): Path to the audio file
-        timed_captions (List[Tuple[Tuple[float, float], str]]): List of captions with start/end times
-        background_video_data (List[Tuple[Tuple[float, float], str]]): List of background videos with start/end times and URLs
-        output_video_file_name (str): Name of the output video file
-        
-    Returns:
-        Optional[str]: Path to the output video file if successful, None otherwise
-    """
-    try:
-        magick_path = get_program_path("magick")
-        print("magick_path", magick_path)
-        if magick_path:
-            os.environ['IMAGEMAGICK_BINARY'] = magick_path
-        else:
-            os.environ['IMAGEMAGICK_BINARY'] = '/usr/bin/convert'
-        
+        Args:
+            background_video_data: List of tuples with time ranges and video URLs.
+            
+        Returns:
+            List of video clips.
+        """
         visual_clips = []
         for (t1, t2), video_url in background_video_data:
             try:
-                video_filename = tempfile.NamedTemporaryFile(delete=False).name
+                video_filename = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
                 if not download_file(video_url, video_filename):
                     continue
-                
-                video_clip = VideoFileClip(video_filename)
-                video_clip = video_clip.set_start(t1)
-                video_clip = video_clip.set_end(t2)
+                video_clip = VideoFileClip(video_filename).set_start(t1).set_end(t2)
                 visual_clips.append(video_clip)
             except Exception as e:
                 print(f"Error processing video {video_url}: {e}")
-                continue
+        return visual_clips
+
+    def _create_audio_clip(self, audio_file_path: Optional[str]) -> Optional[List[AudioFileClip]]:
+        """Create audio clip if audio file path is provided.
         
-        audio_clips = []
+        Args:
+            audio_file_path: Path to audio file or None.
+            
+        Returns:
+            List containing audio clip or None.
+        """
+        if not audio_file_path:
+            return None
         try:
-            audio_file_clip = AudioFileClip(audio_file_path)
-            audio_clips.append(audio_file_clip)
+            return [AudioFileClip(audio_file_path)]
         except Exception as e:
             print(f"Error loading audio file {audio_file_path}: {e}")
             return None
 
+    def _create_text_clips(self, timed_captions: Optional[List[Tuple[Tuple[float, float], str]]]) -> List[TextClip]:
+        """Create text clips for captions if provided.
+        
+        Args:
+            timed_captions: List of tuples with time ranges and caption text or None.
+            
+        Returns:
+            List of text clips.
+        """
+        if not timed_captions:
+            return []
+        text_clips = []
         for (t1, t2), text in timed_captions:
             try:
-                text_clip = TextClip(txt=text, fontsize=70, 
-                                     color="white", 
-                                     font="font/Neue-Einstellung-Bold.ttf",
-                                  stroke_width=2, stroke_color="black", method="label")
-                text_clip = text_clip.set_start(t1)
-                text_clip = text_clip.set_end(t2)
-                text_clip = text_clip.set_position(["center", 1800])
-                visual_clips.append(text_clip)
+                text_clip = TextClip(
+                    txt=text,
+                    fontsize=self.font_size,
+                    color=self.text_color,
+                    font=self.font_path,
+                    stroke_width=self.stroke_width,
+                    stroke_color=self.stroke_color,
+                    method="label"
+                ).set_start(t1).set_end(t2).set_position(self.text_position)
+                text_clips.append(text_clip)
             except Exception as e:
                 print(f"Error creating text clip for '{text}': {e}")
-                continue
+        return text_clips
 
-        try:
-            video = CompositeVideoClip(visual_clips)
-        except Exception as e:
-            print(f"Error creating composite video: {e}")
-            return None
+    def _cleanup_temp_files(self, background_video_data: List[Tuple[Tuple[float, float], str]]) -> None:
+        """Clean up temporary video files.
         
-        if audio_clips:
+        Args:
+            background_video_data: List of tuples with time ranges and video URLs.
+        """
+        for _ in background_video_data:
             try:
-                audio = CompositeAudioClip(audio_clips)
-                video.duration = audio.duration
-                video.audio = audio
-            except Exception as e:
-                print(f"Error processing audio: {e}")
-                return None
-
-        try:
-            video.write_videofile(output_video_file_name, codec='libx264', 
-                                audio_codec='aac', fps=25, preset='veryfast')
-        except Exception as e:
-            print(f"Error writing video file {output_video_file_name}: {e}")
-            return None
-        
-        for (t1, t2), video_url in background_video_data:
-            try:
-                video_filename = tempfile.NamedTemporaryFile(delete=False).name
+                video_filename = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
                 if os.path.exists(video_filename):
                     os.remove(video_filename)
             except OSError as e:
                 print(f"Error cleaning up file {video_filename}: {e}")
-                continue
 
-        return output_video_file_name
-    except Exception as e:
-        print(f"Unexpected error in get_output_media: {e}")
-        return None
+    def compose_video(
+        self,
+        background_video_urls: List[Tuple[Tuple[float, float], str]],
+        audio_file_path: Optional[str] = None,
+        timed_captions: Optional[List[Tuple[Tuple[float, float], str]]] = None
+    ) -> Optional[str]:
+        """Compose video with background videos, optional audio, and captions.
+        
+        Args:
+            background_video_data: List of tuples with time ranges and video URLs.
+            audio_file_path: Path to audio file or None.
+            timed_captions: List of tuples with time ranges and caption text or None.
+            
+        Returns:
+            Path to output video file or None if failed.
+        """
+        try:
+            visual_clips = self._create_video_clips(background_video_urls)
+            if not visual_clips:
+                print("No valid video clips created")
+                return None
+
+            visual_clips.extend(self._create_text_clips(timed_captions))
+            video = CompositeVideoClip(visual_clips)
+
+            audio_clips = self._create_audio_clip(audio_file_path)
+            if audio_clips:
+                try:
+                    audio = CompositeAudioClip(audio_clips)
+                    video.duration = audio.duration
+                    video.audio = audio
+                except Exception as e:
+                    print(f"Error processing audio: {e}")
+                    return None
+
+            try:
+                video.write_videofile(
+                    self.output_video_file_name,
+                    codec=self.video_codec,
+                    audio_codec=self.audio_codec,
+                    fps=self.fps,
+                    preset=self.preset
+                )
+            except Exception as e:
+                print(f"Error writing video file {self.output_video_file_name}: {e}")
+                return None
+
+            self._cleanup_temp_files(background_video_urls)
+            return self.output_video_file_name
+
+        except Exception as e:
+            print(f"Unexpected error in compose_video: {e}")
+            return None
+
+if __name__ == "__main__":
+    config = read_config(path='config/config.yaml')
+    composer = VideoComposer(config['video_composer'])
+    
+    # Example test data
+    background_videos = [
+        ((0, 5), "https://videos.pexels.com/video-files/15287153/15287153-hd_1080_1920_30fps.mp4"),
+        ((5, 10), "https://videos.pexels.com/video-files/7550336/7550336-hd_1080_1920_30fps.mp4")
+    ]
+    timed_captions = [
+        ((0, 5), "Hello, World!"),
+        ((5, 10), "Welcome to Video!")
+    ]
+
+    test_config = read_config(path='config/test_config.yaml')
+    test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
+    
+    
+    output = composer.compose_video(
+        background_video_urls=background_videos,
+        audio_file_path=test_audio_path,
+        timed_captions=timed_captions
+    )
+    print(f"Video created: {output}")

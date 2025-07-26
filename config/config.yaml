@@ -3,7 +3,7 @@ video_server: pexel
 output_video_file_name: output/rendered_video.mp4
 
 script_generator:
-  video_time_length: 120
+  video_time_length: 60
   words_per_minute: 210
   script_generation_prompt_path: config/script_generation_prompt.txt
   model_name: gpt-4o-mini
@@ -14,11 +14,10 @@ caption_generator:
   language: vi
   consider_punctuation: false
 
-keyword_enerator:
+keyword_generator:
   model_name: gpt-4o-mini
   temperature: 1.0
   video_search_keyword_prompt_path: config/video_search_keyword_prompt.txt
-
 
 video_search:
   url: "https://api.pexels.com/videos/search"
@@ -27,3 +26,16 @@ video_search:
   target_duration: 15
   video_width: 1080
   video_height: 1920
+
+video_composer:
+  output_video_file_name: ${output_video_file_name}
+  font_path: "font/Neue-Einstellung-Bold.ttf"
+  font_size: 70
+  text_color: "white"
+  stroke_width: 2
+  stroke_color: "black"
+  text_position: ["center", 1800]
+  video_codec: "libx264"
+  audio_codec: "aac"
+  fps: 25
+  preset: "veryfast"
