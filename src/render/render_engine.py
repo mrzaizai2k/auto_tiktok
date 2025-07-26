@@ -173,7 +173,7 @@ class VideoComposer:
 
 if __name__ == "__main__":
     config = read_config(path='config/config.yaml')
-    composer = VideoComposer(config['video_composer'])
+    composer = VideoComposer(config)
     
     # Example test data
     background_videos = [

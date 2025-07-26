@@ -2,9 +2,10 @@ import sys
 sys.path.append("")
 
 import asyncio
+from src.script.description_generator import DescriptionGenerator
 from src.script.script_generator import ScriptGenerator
 from src.audio.audio_generator import generate_audio
-from src.captions.timed_captions_generator import CaptionGenerator, correct_timed_captions
+from src.captions.timed_captions_generator import CaptionGenerator
 from src.video.background_video_generator import VideoSearch
 from src.render.render_engine import VideoComposer
 from src.video.video_search_query_generator import VideoKeywordGenerator
@@ -25,8 +26,12 @@ if __name__ == "__main__":
     check_path(output_audio_path)
     check_path(output_video_path)
 
-    generator = ScriptGenerator(config)
-    script = generator.generate_script(topic)
+    script_generator = ScriptGenerator(config)
+    script = script_generator.generate_script(topic)
+
+    description_generator = DescriptionGenerator(config)
+    description = description_generator.generate_description(script)
+    
 
     print("script: {}".format(script))
 

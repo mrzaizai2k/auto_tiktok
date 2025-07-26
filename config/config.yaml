@@ -1,6 +1,7 @@
-output_audio_path: output/audio_tts.wav
+output_audio_path: &out_audio_path output/audio_tts.wav
+output_video_path: &out_video_path output/rendered_video.mp4
+
 video_server: pexel
-output_video_path: output/rendered_video.mp4
 
 script_generator:
   video_time_length: 60
@@ -13,7 +14,7 @@ caption_generator:
   max_caption_size: 15
   language: vi
   consider_punctuation: false
-  srt_file_path: output/captions.srt #Can be None
+  srt_file_path: output/captions.srt # Can be None
 
 keyword_generator:
   model_name: gpt-4o-mini
@@ -29,7 +30,7 @@ video_search:
   video_height: 1920
 
 video_composer:
-  output_video_path: ${output_video_path}
+  output_video_path: *out_video_path
   font_path: "font/Neue-Einstellung-Bold.ttf"
   font_size: 120
   text_color: "white"
@@ -42,8 +43,8 @@ video_composer:
   preset: "veryfast"
 
 audio_generator:
-  voice: "vi-VN-NamMinhNeural" #vi-VN-HoaiMyNeural #vi-VN-NamMinhNeural
-  output_audio_path: ${output_audio_path}
+  voice: "vi-VN-NamMinhNeural" # vi-VN-HoaiMyNeural # vi-VN-NamMinhNeural
+  output_audio_path: *out_audio_path
 
 description_generator:
   model_name: gpt-4o-mini

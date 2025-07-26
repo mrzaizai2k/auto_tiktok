@@ -27,11 +27,14 @@ jobs:
           sudo apt install -y make build-essential
           make install
 
-      - name: Run caption_generator test
-        run: python src/captions/timed_captions_generator.py
-
       - name: Run scripts test
         run: python src/script/script_generator.py
+
+      - name: Run descripton generator test
+        run: python src/script/description_generator.py
+        
+      - name: Run caption_generator test
+        run: python src/captions/timed_captions_generator.py
 
       - name: Run keyword_generator test
         run: python src/video/video_search_query_generator.py

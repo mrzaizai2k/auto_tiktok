@@ -9,6 +9,7 @@ run:
 unit_test:
 
 	python src/script/script_generator.py
+	python src/script/description_generator.py
 	python src/audio/audio_generator.py
 	python src/captions/timed_captions_generator.py
 	python src/video/video_search_query_generator.py
