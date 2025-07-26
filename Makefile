@@ -1,7 +1,6 @@
 install:
-	conda init
-	conda create -n text2vid python=3.10 -y
-	conda activate text2vid
+# 	conda create -n text2vid python=3.10 -y
+# 	conda activate text2vid
 	pip install -r requirements.txt
 
 run:
