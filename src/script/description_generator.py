@@ -4,6 +4,9 @@ sys.path.append("")
 import os
 from typing import Dict, Any
 from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class DescriptionGenerator:
@@ -21,6 +24,7 @@ class DescriptionGenerator:
         self.model_name = self.config.get('model_name', 'gpt-4o-mini')
         
         self.api_key = os.getenv('OPENAI_API_KEY')
+
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
         self.client = OpenAI(api_key=self.api_key)

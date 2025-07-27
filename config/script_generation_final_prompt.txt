@@ -1,0 +1,2 @@
+Viết lại kịch bản theo đúng format, và rút gọn còn {number_of_words} từ. Lưu ý chỉ viết giọng kể diễn viên lồng tiếng thuyết minh trong video, đừng viết gì thêm 
+script: <kịch bản đọc>

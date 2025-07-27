@@ -29,7 +29,7 @@ multidict==6.0.5
 networkx==3.3
 numba==0.59.1
 numpy==1.26.4
-openai==1.31.1
+openai
 openai-whisper==20231117
 pillow==10.3.0
 proglog==0.1.10

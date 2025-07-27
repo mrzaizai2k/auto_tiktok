@@ -1,11 +1,10 @@
 import sys
 sys.path.append("")
 
+
 import os
-from typing import Dict, Any
+from typing import Dict
 from openai import OpenAI
-import json
-from src.Utils.utils import read_config
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,76 +12,85 @@ load_dotenv()
 class ScriptGenerator:
     """Generates TikTok video scripts inspired by books using OpenAI's API."""
     
-    def __init__(self, config: Dict[str, Any]):
-        """Initialize ScriptGenerator with configuration.
-        
-        Args:
-            config (Dict[str, Any]): Configuration dictionary from config.yaml
-        """
-        self.config = config['script_generator']
-        self.script_prompt_path = config.get('script_generation_prompt_path', 'config/script_generation_prompt.txt')
-        self.model_name = config.get('model_name', 'gpt-4o-mini')
-        self.video_time_length = config.get('video_time_length', 60)
-        self.words_per_minute = config.get('words_per_minute', 140)
-        self.number_of_words = int(self.video_time_length * (self.words_per_minute / 60))
-        
+    def __init__(self, config: Dict[str, dict]):
+        """Initialize with configuration from config.yaml."""
+        cfg = config['script_generator']
+        self.model_name = cfg.get('model_name', 'gpt-4o-mini')
+        self.model_search_name = cfg.get('model_search_name', 'gpt-4o-mini-search-preview')
+        self.video_time_length = cfg.get('video_time_length', 60)
+        self.words_per_minute = cfg.get('words_per_minute', 140)
+        self.number_of_words = int(self.video_time_length * self.words_per_minute / 60 * 1.2)
+        self.prompt_paths = {
+            'web_search': cfg.get('script_generation_prompt_path', 'config/script_web_search_prompt.txt'),
+            'detailed': cfg.get('script_generation_prompt_path', 'config/script_generation_detailed_prompt.txt'),
+            'final': cfg.get('script_generation_prompt_path', 'config/script_generation_final_prompt.txt')
+        }
         self.api_key = os.getenv('OPENAI_API_KEY')
         if not self.api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
+            raise ValueError("OPENAI_API_KEY not set")
         self.client = OpenAI(api_key=self.api_key)
-        
-        try:
-            with open(self.script_prompt_path, 'r', encoding='utf-8') as file:
-                self.prompt = file.read().format(
-                    video_time_length=self.video_time_length,
-                    number_of_words=self.number_of_words
-                )
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Prompt file not found at {self.script_prompt_path}")
+        self.messages = []
 
-    def generate_script(self, topic: str) -> str:
-        """Generate a script for the given topic using OpenAI API.
-        
-        Args:
-            topic (str): Topic or book title for script generation
-            
-        Returns:
-            str: Generated script
-            
-        Raises:
-            ValueError: If API response is invalid or JSON parsing fails
-            Exception: For other API-related errors
-        """
+    def read_prompt(self, path: str) -> str:
+        """Read prompt file."""
+        try:
+            with open(path, 'r', encoding='utf-8') as file:
+                return file.read()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Prompt file not found: {path}")
+
+    def search_web(self, topic: str = "Đắc Nhân Tâm") -> str:
+        """Search web for relevant information."""
+        prompt = self.read_prompt(self.prompt_paths['web_search'])
+        # response = self.client.responses.create(
+        #     model=self.model_search_name,
+        #     input= prompt + " " + topic,
+        #     tools=[{"type": "web_search_preview"}]
+        # )
+
+        response = self.client.responses.create(
+            model=self.model_search_name,
+            tools=[{
+                "type": "web_search_preview",
+                    "search_context_size": "medium",
+                    }],
+            input=prompt + " " + topic,
+        )
+
+        output = response.output_text
+
+        return output
+
+    def generate_text(self, messages: list) -> str:
+        """Generate text from LLM."""
         try:
             response = self.client.chat.completions.create(
                 model=self.model_name,
-                messages=[
-                    {"role": "system", "content": self.prompt},
-                    {"role": "user", "content": topic}
-                ]
+                messages=messages
             )
-            content = response.choices[0].message.content.strip()
-
-            try:
-                if content.lower().startswith("script:"):
-                    script_text = content[len("script:"):].strip()
-                    script = json.loads(json.dumps({"script": script_text}))["script"]
-                else:
-                    raise ValueError("Response does not start with 'script:'")
-            except Exception as e:
-                raise ValueError(f"Failed to parse script from response: {e}")
-
-            return script
-            
+            return response.choices[0].message.content.strip()
         except Exception as e:
-            raise Exception(f"Failed to generate script: {str(e)}")
+            raise Exception(f"Failed to generate text: {e}")
+
+    def generate_script(self, topic: str) -> str:
+        """Generate script for given topic."""
+        self.messages.append({"role": "assistant", "content": self.search_web(topic)})
+        self.messages.append({"role": "user", "content": self.read_prompt(self.prompt_paths['detailed'])})
+        detailed_script = self.generate_text(self.messages)
+        self.messages.append({"role": "assistant", "content": detailed_script})
+        self.messages.append({"role": "user", "content": self.read_prompt(self.prompt_paths['final'])})
+        final_script = self.generate_text(self.messages)
+        return self.extract_script(final_script)
+
+    def extract_script(self, content: str) -> str:
+        """Extract script from response."""
+        if not content.lower().startswith("script:"):
+            raise ValueError("Response must start with 'script:'")
+        return content[len("script:"):].strip()
 
 if __name__ == "__main__":
-    try:
-        config = read_config(path='config/config.yaml')
-        generator = ScriptGenerator(config)
-        test_topic = "Đắc nhân tâm"
-        script = generator.generate_script(test_topic)
-        print(f"Generated script for '{test_topic}':\n{script}")
-    except Exception as e:
-        print(f"Error: {str(e)}")
+    from src.Utils.utils import read_config
+    config = read_config('config/config.yaml')
+    generator = ScriptGenerator(config)
+    script = generator.generate_script("sách Đắc Nhân Tâm")
+    print(f"Generated script:\n{script}")
