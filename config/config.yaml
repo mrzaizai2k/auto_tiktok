@@ -11,6 +11,7 @@ script_generator:
   final_prompt_path: config/script_generation_final_prompt.txt
   model_name: gpt-4o-mini
   model_search_name: gpt-4.1-mini
+  search_context_size: medium
 
 
 caption_generator:

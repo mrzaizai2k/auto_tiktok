@@ -14,16 +14,16 @@ class ScriptGenerator:
     
     def __init__(self, config: Dict[str, dict]):
         """Initialize with configuration from config.yaml."""
-        cfg = config['script_generator']
-        self.model_name = cfg.get('model_name', 'gpt-4o-mini')
-        self.model_search_name = cfg.get('model_search_name', 'gpt-4o-mini-search-preview')
-        self.video_time_length = cfg.get('video_time_length', 60)
-        self.words_per_minute = cfg.get('words_per_minute', 140)
+        self.config = config['script_generator']
+        self.model_name = self.config.get('model_name', 'gpt-4o-mini')
+        self.model_search_name = self.config.get('model_search_name', 'gpt-4.1-mini')
+        self.video_time_length = self.config.get('video_time_length', 60)
+        self.words_per_minute = self.config.get('words_per_minute', 140)
         self.number_of_words = int(self.video_time_length * self.words_per_minute / 60 * 1.2)
         self.prompt_paths = {
-            'web_search': cfg.get('script_generation_prompt_path', 'config/script_web_search_prompt.txt'),
-            'detailed': cfg.get('script_generation_prompt_path', 'config/script_generation_detailed_prompt.txt'),
-            'final': cfg.get('script_generation_prompt_path', 'config/script_generation_final_prompt.txt')
+            'web_search': self.config.get('script_generation_prompt_path', 'config/script_web_search_prompt.txt'),
+            'detailed': self.config.get('script_generation_prompt_path', 'config/script_generation_detailed_prompt.txt'),
+            'final': self.config.get('script_generation_prompt_path', 'config/script_generation_final_prompt.txt')
         }
         self.api_key = os.getenv('OPENAI_API_KEY')
         if not self.api_key:
@@ -42,19 +42,14 @@ class ScriptGenerator:
     def search_web(self, topic: str = "Đắc Nhân Tâm") -> str:
         """Search web for relevant information."""
         prompt = self.read_prompt(self.prompt_paths['web_search'])
-        # response = self.client.responses.create(
-        #     model=self.model_search_name,
-        #     input= prompt + " " + topic,
-        #     tools=[{"type": "web_search_preview"}]
-        # )
-
+        
         response = self.client.responses.create(
             model=self.model_search_name,
             tools=[{
                 "type": "web_search_preview",
-                    "search_context_size": "medium",
+                    "search_context_size": self.config.get('search_context_size', "medium"),
                     }],
-            input=prompt + " " + topic,
+            input = prompt + " " + topic,
         )
 
         output = response.output_text
@@ -79,8 +74,9 @@ class ScriptGenerator:
         detailed_script = self.generate_text(self.messages)
         self.messages.append({"role": "assistant", "content": detailed_script})
         self.messages.append({"role": "user", "content": self.read_prompt(self.prompt_paths['final'])})
-        final_script = self.generate_text(self.messages)
-        return self.extract_script(final_script)
+        sub_final_script = self.generate_text(self.messages)
+        final_script = self.extract_script(sub_final_script)
+        return final_script
 
     def extract_script(self, content: str) -> str:
         """Extract script from response."""
