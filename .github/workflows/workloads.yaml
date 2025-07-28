@@ -28,11 +28,6 @@ jobs:
           sudo apt install -y make build-essential
           make install
 
-      - name: Load .env
-        run: |
-          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-          echo "PEXELS_API_KEY=${{ secrets.PEXELS_API_KEY }}" >> .env
-
 
       - name: Run scripts test
         run: python src/script/script_generator.py
