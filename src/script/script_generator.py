@@ -6,7 +6,7 @@ import os
 from typing import Dict
 from openai import OpenAI
 from dotenv import load_dotenv
-
+load_dotenv()
 
 
 class ScriptGenerator:
@@ -25,7 +25,6 @@ class ScriptGenerator:
             'detailed': self.config.get('script_generation_prompt_path', 'config/script_generation_detailed_prompt.txt'),
             'final': self.config.get('script_generation_prompt_path', 'config/script_generation_final_prompt.txt')
         }
-        load_dotenv()
         self.api_key = os.getenv('OPENAI_API_KEY')
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY not set")

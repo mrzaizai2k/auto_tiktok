@@ -15,3 +15,4 @@ unit_test:
 	python src/video/video_search_query_generator.py
 	python src/video/background_video_generator.py
 	python src/render/render_engine.py
+	python src/script/crawl_data.py

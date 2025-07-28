@@ -50,3 +50,6 @@ yarl==1.9.4
 groq==0.11.0
 PyYAML
 python-dotenv
+langchain-community
+unstructured
+newspaper3k

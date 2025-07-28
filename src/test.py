@@ -24,3 +24,6 @@ txt_clip = txt_clip.set_position(["center", 1200])
 # Overlay the text clip on the first video clip
 final_video = CompositeVideoClip([clip, txt_clip])
 final_video.write_videofile("result.mp4")
+
+
+

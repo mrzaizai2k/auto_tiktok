@@ -41,3 +41,6 @@ jobs:
 
       - name: Run video_urls_search test
         run: python src/video/background_video_generator.py
+
+      - name: Run crawl data test
+        run: python src/script/crawl_data.py
