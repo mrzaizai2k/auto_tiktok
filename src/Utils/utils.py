@@ -161,3 +161,39 @@ def levenshtein_distance(s1: str, s2: str) -> int:
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
     return previous_row[-1]
+
+
+
+class GoogleTranslator:
+    def __init__(self):
+        pass
+
+    def translate(self, text, to_lang, max_input_length=4900):
+        url = 'https://translate.googleapis.com/translate_a/single'
+        
+        def get_translation_chunk(chunk):
+            params = {
+                'client': 'gtx',
+                'sl': 'auto',
+                'tl': to_lang,
+                'dt': ['t', 'bd'],
+                'dj': '1',
+                'source': 'popup5',
+                'q': chunk
+            }
+            response = requests.get(url, params=params, verify=False).json()
+            sentences = response['sentences']
+            translated_chunk = ""
+            for sentence in sentences:
+                translated_chunk += sentence['trans']
+            return translated_chunk
+        
+        if len(text) <= max_input_length:
+            return get_translation_chunk(text)
+        
+        translated_text = ""
+        for i in range(0, len(text), max_input_length):
+            chunk = text[i:i + max_input_length]
+            translated_text += get_translation_chunk(chunk) + "\n"
+        
+        return translated_text.strip()
