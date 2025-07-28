@@ -3,7 +3,6 @@ venv/
 __pycache__/
 .DS_Store
 .env
-*.wav
 *.mp4
 *.mp3
 output/

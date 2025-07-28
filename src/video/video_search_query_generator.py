@@ -267,20 +267,17 @@ def create_example_captions():
     return corrected_captions, test_script
 
 if __name__ == "__main__":
-    try:
-        config = read_config(path='config/config.yaml')
-        generator = VideoKeywordGenerator(config)
-        
-        captions, test_script = create_example_captions()
-        print(f"captions '{captions}':")
-        for (start, end), caption in captions:
-            print(f"[{start:.2f}s - {end:.2f}s]: {caption}")
+    config = read_config(path='config/config.yaml')
+    generator = VideoKeywordGenerator(config)
+    
+    captions, test_script = create_example_captions()
+    print(f"captions '{captions}':")
+    for (start, end), caption in captions:
+        print(f"[{start:.2f}s - {end:.2f}s]: {caption}")
 
-        results = generator.get_video_search_queries(test_script, captions)
-        
-        print("Generated timestamped keywords:")
-        for start, end, keywords in results:
-            print(f"[{start:.2f}s - {end:.2f}s]: {keywords}")
+    results = generator.get_video_search_queries(test_script, captions)
+    
+    print("Generated timestamped keywords:")
+    for start, end, keywords in results:
+        print(f"[{start:.2f}s - {end:.2f}s]: {keywords}")
             
-    except Exception as e:
-        print(f"Error: {str(e)}")
