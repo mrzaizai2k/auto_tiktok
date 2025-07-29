@@ -254,12 +254,14 @@ class VideoKeywordGenerator:
 
 
 def create_example_captions():
-    config = read_config(path='config/test_config.yaml')
+    test_config = read_config(path='config/test_config.yaml')
     from src.captions.timed_captions_generator import CaptionGenerator
-    generator = CaptionGenerator(config)
-    test_audio_path = config['test_audio_path']  # Replace with actual Vietnamese audio file path
-    test_script = config['test_script']  
 
+    test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
+    test_script = test_config['test_script']  
+
+    config = read_config(path='config/config.yaml')
+    generator = CaptionGenerator(config)
     corrected_captions = generator.generate_timed_captions(audio_filename=test_audio_path,
                                                            script_text=test_script)
 
