@@ -8,7 +8,8 @@ from bs4 import BeautifulSoup
 from typing import List, Dict, Optional, Literal
 from langchain_community.document_loaders import NewsURLLoader
 from unstructured.cleaners.core import clean_extra_whitespace
-from src.Utils.utils import GoogleTranslator
+from src.Utils.utils import GoogleTranslator, timeit
+import concurrent.futures
 
 class SpiderPostClient:
     BASE_SEARCH_URL = "https://spiderum.com/api/v1/search"
@@ -56,20 +57,20 @@ class SpiderPostClient:
         if not content:
             content = self._extract_with_newsurl(url)
         return content
-
+    
+    @timeit
     def search_posts(self, search_text: str, page: int = 1) -> List[Dict]:
-        """Search and return posts, including full content."""
+        """Search and return posts, fetching content with ThreadPoolExecutor."""
         url = self._create_search_url(search_text, page)
         response = requests.get(url, headers=self.headers, timeout=10)
         response.raise_for_status()
         data = response.json()
 
         results = []
+        slugs = []
         for item in data.get("items", []):
             slug = item.get("slug")
             tags = [tag.get("name") for tag in item.get("tags", [])]
-            content = self.fetch_post_content(slug) if slug else ""
-
             results.append({
                 "title": item.get("title"),
                 "link": f"{self.BASE_POST_URL}{slug}",
@@ -81,10 +82,21 @@ class SpiderPostClient:
                 "comment_count": item.get("comment_count") or 0,
                 "views_count": item.get("views_count") or 0,
                 "point": item.get("point") or 0,
-                "content": content
+                "content": ""
             })
-        return results
+            if slug:
+                slugs.append(slug)
 
+        # Fetch content in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            contents = list(executor.map(self.fetch_post_content, slugs))
+
+        # Assign content to results
+        for result, content in zip(results, contents):
+            result["content"] = content if isinstance(content, str) else ""
+
+        return results
+    
     def sort_posts(self, posts: List[Dict], key: Literal["comment_count", "views_count", "point"] = "views_count", 
                    reverse: bool = True) -> List[Dict]:
         """Sort posts by comment_count, views_count, or point."""
@@ -98,47 +110,13 @@ class SpiderPostClient:
         return sorted(posts, key=lambda x: _to_number(x.get(key)), reverse=reverse)
 
 
+
 class NewsScraper:
     '''
     Scrape News from https://vnexpress.net/ 
     '''
     def __init__(self):
         pass
-
-    def search_query_news(self, query: str, date_format: Literal['day', 'week', 'month', 'year'] = 'day') -> list:
-        query = query.replace(' ', '%20')
-        url = f"https://timkiem.vnexpress.net/?search_f=&q={query}&media_type=text&date_format={date_format}&"
-        response = requests.get(url)
-        attemp = 0
-        max_attempts = 3
-        news_items = []
-
-        while attemp <= max_attempts:
-            try:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                articles = soup.find_all('article', class_='item-news-common')
-                for article in articles:
-                    url = article.get('data-url')
-                    if url and 'eclick' not in url:
-                        title = article.find('h3', class_='title-news').find('a').text.strip()
-                        description = article.find('p', class_='description').text.strip()
-                        content = self.take_text_from_link(url)
-                        news_items.append({
-                            'url': url,
-                            'title': title,
-                            'description': description,
-                            'content': content
-                        })
-                break
-            except Exception as e:
-                print(f"An error occurred: {str(e)}")
-                print("Resetting the Scraper in 10 seconds...")
-                time.sleep(10)
-                attemp += 1
-                if attemp > max_attempts:
-                    print("Max attempts reached. Exiting.")
-                    break
-        return news_items
 
     def take_text_from_link(self, url: str) -> str:
         try:
@@ -151,6 +129,53 @@ class NewsScraper:
         except Exception as e:
             print(f"Error fetching content from {url}: {str(e)}")
             return ""
+
+    @timeit
+    def search_query_news(self, query: str, date_format: Literal['day', 'week', 'month', 'year'] = 'day') -> list:
+        query = query.replace(' ', '%20')
+        url = f"https://timkiem.vnexpress.net/?search_f=&q={query}&media_type=text&date_format={date_format}&"
+        news_items = []
+        urls = []
+
+        # Fetch and parse search page
+        attemp = 0
+        max_attempts = 3
+        while attemp <= max_attempts:
+            try:
+                response = requests.get(url)
+                soup = BeautifulSoup(response.text, 'html.parser')
+                articles = soup.find_all('article', class_='item-news-common')
+                for article in articles:
+                    article_url = article.get('data-url')
+                    if article_url and 'eclick' not in article_url:
+                        title = article.find('h3', class_='title-news').find('a').text.strip()
+                        description = article.find('p', class_='description').text.strip()
+                        news_items.append({
+                            'url': article_url,
+                            'title': title,
+                            'description': description,
+                            'content': ""
+                        })
+                        urls.append(article_url)
+                break
+            except Exception as e:
+                print(f"An error occurred: {str(e)}")
+                print("Resetting the Scraper in 10 seconds...")
+                time.sleep(10)
+                attemp += 1
+                if attemp > max_attempts:
+                    print("Max attempts reached. Exiting.")
+                    return news_items
+
+        # Fetch content in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            contents = list(executor.map(self.take_text_from_link, urls))
+
+        # Assign content to news_items
+        for item, content in zip(news_items, contents):
+            item['content'] = content if isinstance(content, str) else ""
+
+        return news_items
 
 class GoodreadsScraper:
     def __init__(self):
@@ -192,8 +217,20 @@ class GoodreadsScraper:
     
 if __name__ == "__main__":
 
-    scraper = GoodreadsScraper()
     book_name = "Đắc Nhân Tâm"
+        
+    client = SpiderPostClient()
+    posts = client.search_posts(book_name, page=1)
+    print("posts:", posts[0])
+    content = client.fetch_post_content("THE-NAO-LA-DAC-NHAN-TAM-fbc")
+    print("content", content[:30], "...\n")
+
+    scraper = NewsScraper()
+    results = scraper.search_query_news(query=book_name, date_format="all")
+    print('results',results[0]['url'])
+
+    scraper = GoodreadsScraper()
+    
     book_data = scraper.crawl_book(book_name)
     if "error" not in book_data:
         print(f"Book Details for {book_name}:")
@@ -203,18 +240,8 @@ if __name__ == "__main__":
         print(f"Description: {book_data['description'][:100]}...")
         print("\nTop Reviews (translated to Vietnamese):")
         for i, review in enumerate(book_data['top_reviews'], 1):
-            print(f"Review {i}: {review[:100]}...")
+            print(f"Review {i}: {review[:30]}...")
     else:
         print(book_data["error"])
-        
-    client = SpiderPostClient()
-    posts = client.search_posts("Đắc Nhân Tâm", page=1)
-    print("posts:", posts[0])
-    content = client.fetch_post_content("THE-NAO-LA-DAC-NHAN-TAM-fbc")
-    print("content", content[:300], "...\n")
-
-    scraper = NewsScraper()
-    results = scraper.search_query_news(query="đắc nhân tâm", date_format="all")
-    print('results',results[:2])
 
     

@@ -6,12 +6,11 @@ video_server: pexel
 script_generator:
   video_time_length: 60
   words_per_minute: 210
-  web_search_prompt_path: config/script_web_search_prompt.txt
+
   detailed_script_prompt_path: config/script_generation_detailed_prompt.txt
   final_prompt_path: config/script_generation_final_prompt.txt
+  keyword_prompt_path: config/script_keyword_extraction_prompt.txt
   model_name: gpt-4o-mini
-  model_search_name: gpt-4.1-mini
-  search_context_size: medium
 
 
 caption_generator:
