@@ -1,7 +1,6 @@
 output_audio_path: &out_audio_path output/audio_tts.wav
 output_video_path: &out_video_path output/rendered_video.mp4
 
-video_server: pexel
 
 script_generator:
   video_time_length: 60

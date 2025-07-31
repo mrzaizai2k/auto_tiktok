@@ -4,7 +4,7 @@ import os
 import tempfile
 from typing import List, Tuple, Optional, Dict, Any
 from moviepy.editor import AudioFileClip, CompositeVideoClip, CompositeAudioClip, TextClip, VideoFileClip
-from src.Utils.utils import download_file, get_program_path, read_config
+from src.Utils.utils import download_file, read_config
 
 class VideoComposer:
     """Class to create composite videos with optional audio, background videos, and captions."""
@@ -27,15 +27,6 @@ class VideoComposer:
         self.audio_codec = config.get('audio_codec', 'aac')
         self.fps = config.get('fps', 25)
         self.preset = config.get('preset', 'veryfast')
-        self._setup_imagemagick()
-
-    def _setup_imagemagick(self) -> None:
-        """Set up ImageMagick binary path."""
-        try:
-            magick_path = get_program_path("magick")
-            os.environ['IMAGEMAGICK_BINARY'] = magick_path if magick_path else '/usr/bin/convert'
-        except Exception as e:
-            print(f"Error setting up ImageMagick: {e}")
 
     def _create_video_clips(self, background_video_data: List[Tuple[Tuple[float, float], str]]) -> List[VideoFileClip]:
         """Create video clips from background video data.
@@ -133,43 +124,43 @@ class VideoComposer:
         Returns:
             Path to output video file or None if failed.
         """
-        try:
-            visual_clips = self._create_video_clips(background_video_urls)
-            if not visual_clips:
-                print("No valid video clips created")
-                return None
-
-            visual_clips.extend(self._create_text_clips(timed_captions))
-            video = CompositeVideoClip(visual_clips)
-
-            audio_clips = self._create_audio_clip(audio_file_path)
-            if audio_clips:
-                try:
-                    audio = CompositeAudioClip(audio_clips)
-                    video.duration = audio.duration
-                    video.audio = audio
-                except Exception as e:
-                    print(f"Error processing audio: {e}")
-                    return None
-
-            try:
-                video.write_videofile(
-                    self.output_video_path,
-                    codec=self.video_codec,
-                    audio_codec=self.audio_codec,
-                    fps=self.fps,
-                    preset=self.preset
-                )
-            except Exception as e:
-                print(f"Error writing video file {self.output_video_path}: {e}")
-                return None
-
-            self._cleanup_temp_files(background_video_urls)
-            return self.output_video_path
-
-        except Exception as e:
-            print(f"Unexpected error in compose_video: {e}")
+        # try:
+        visual_clips = self._create_video_clips(background_video_urls)
+        if not visual_clips:
+            print("No valid video clips created")
             return None
+
+        visual_clips.extend(self._create_text_clips(timed_captions))
+        video = CompositeVideoClip(visual_clips)
+
+        audio_clips = self._create_audio_clip(audio_file_path)
+        if audio_clips:
+            try:
+                audio = CompositeAudioClip(audio_clips)
+                video.duration = audio.duration
+                video.audio = audio
+            except Exception as e:
+                print(f"Error processing audio: {e}")
+                return None
+
+        # try:
+        video.write_videofile(
+            self.output_video_path,
+            codec=self.video_codec,
+            audio_codec=self.audio_codec,
+            fps=self.fps,
+            preset=self.preset
+        )
+        # except Exception as e:
+        #     print(f"Error writing video file {self.output_video_path}: {e}")
+        #     return None
+
+        self._cleanup_temp_files(background_video_urls)
+        return self.output_video_path
+
+        # except Exception as e:
+        #     print(f"Unexpected error in compose_video: {e}")
+        #     return None
 
 if __name__ == "__main__":
     config = read_config(path='config/config.yaml')
@@ -177,7 +168,7 @@ if __name__ == "__main__":
     
     # Example test data
     background_videos = [
-        ((0, 5), "https://videos.pexels.com/video-files/15287153/15287153-hd_1080_1920_30fps.mp4"),
+        ((0, 5), "https://cdn.pixabay.com/video/2024/08/30/228847_medium.mp4"),
         ((5, 10), "https://videos.pexels.com/video-files/7550336/7550336-hd_1080_1920_30fps.mp4")
     ]
     timed_captions = [

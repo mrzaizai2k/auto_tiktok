@@ -102,43 +102,6 @@ def download_file(url: str, filename: str) -> bool:
         print(f"Error writing file {filename}: {e}")
         return False
 
-def search_program(program_name: str) -> Optional[str]:
-    """
-    Searches for the specified program in the system PATH.
-    
-    Args:
-        program_name (str): Name of the program to search for
-        
-    Returns:
-        Optional[str]: Path to the program if found, None otherwise
-    """
-    try:
-        search_cmd = "where" if platform.system() == "Windows" else "which"
-        return subprocess.check_output([search_cmd, program_name]).decode().strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Error searching for program {program_name}: {e}")
-        return None
-    except UnicodeDecodeError as e:
-        print(f"Error decoding program path for {program_name}: {e}")
-        return None
-
-def get_program_path(program_name: str) -> Optional[str]:
-    """
-    Gets the path to the specified program.
-    
-    Args:
-        program_name (str): Name of the program to find
-        
-    Returns:
-        Optional[str]: Path to the program if found, None otherwise
-    """
-    try:
-        program_path = search_program(program_name)
-        return program_path
-    except Exception as e:
-        print(f"Error getting program path for {program_name}: {e}")
-        return None
-    
 def levenshtein_distance(s1: str, s2: str) -> int:
     """Calculate Levenshtein distance between two strings.
     
