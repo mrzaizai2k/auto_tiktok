@@ -53,3 +53,5 @@ python-dotenv
 langchain-community
 unstructured
 newspaper3k
+f5-tts
+vinorm

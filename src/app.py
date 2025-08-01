@@ -4,7 +4,7 @@ sys.path.append("")
 import asyncio
 from src.script.description_generator import DescriptionGenerator
 from src.script.script_generator import ScriptGenerator
-from src.audio.audio_generator import generate_audio
+from src.audio.audio_generator import generate_audio, AudioGenerator
 from src.captions.timed_captions_generator import CaptionGenerator
 from src.video.background_video_generator import VideoSearch
 from src.render.render_engine import VideoComposer
@@ -35,7 +35,11 @@ if __name__ == "__main__":
 
     print("script: {}".format(script))
 
-    asyncio.run(generate_audio(text=script, config=config))
+    audio_generator = AudioGenerator(config)
+    try:
+        audio, _, audio_path = audio_generator.infer_tts(text = script)
+    except Exception as e:
+        asyncio.run(generate_audio(text=script, config=config))
 
     caption_generator = CaptionGenerator(config)
     timed_captions = caption_generator.generate_timed_captions(audio_filename=output_audio_path,
