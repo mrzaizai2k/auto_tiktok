@@ -1,2 +1,14 @@
-Viết lại kịch bản theo đúng format, và rút gọn còn {number_of_words} từ. Lưu ý chỉ viết giọng kể diễn viên lồng tiếng thuyết minh trong video, đừng viết gì thêm 
-script: <kịch bản đọc>
+Viết lại kịch bản dưới đây theo đúng định dạng sau và rút gọn còn {number_of_words} từ.
+
+- Chỉ viết phần giọng đọc của diễn viên lồng tiếng trong video.
+- Không thêm mô tả, không ghi tiêu đề, không viết chú thích.
+- Chỉ xuất ra đúng định dạng sau:
+
+script: <nội dung kịch bản sau khi rút gọn>
+
+Ví dụ:
+
+script: Có người từng bỏ phố về quê, nhưng rau không mọc...
+hoặc
+script: Bạn có biết sách là cánh cửa mở ra những thế giới chưa từng bước vào?
+Đây là kịch bản gốc cần rút gọn:

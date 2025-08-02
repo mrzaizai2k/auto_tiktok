@@ -18,14 +18,21 @@ class ScriptGenerator:
         """Initialize with configuration from config.yaml."""
         self.config = config['script_generator']
         self.model_name = self.config.get('model_name', 'gpt-4o-mini')
+        self.output_script_path = self.config.get('output_script_path', 'output/script.txt')
         self.video_time_length = self.config.get('video_time_length', 60)
         self.words_per_minute = self.config.get('words_per_minute', 140)
         self.number_of_words = int(self.video_time_length * self.words_per_minute / 60 * 1.2)
         self.prompt_paths = {
-            'detailed': self.config.get('script_generation_prompt_path', 'config/script_generation_detailed_prompt.txt'),
-            'final': self.config.get('script_generation_prompt_path', 'config/script_generation_final_prompt.txt'),
+            'detailed': self.config.get('detailed_script_prompt_path', 'config/script_generation_detailed_prompt.txt'),
+            'final': self.config.get('final_prompt_path', 'config/script_generation_final_prompt.txt'),
             'keyword': self.config.get('keyword_prompt_path', 'config/script_keyword_extraction_prompt.txt')
         }
+        
+        # Model configurations
+        self.detailed_model_config = self.config.get('detailed_model', {})
+        self.final_model_config = self.config.get('final_model', {})
+        self.keyword_model_config = self.config.get('keyword_model', {})
+        
         self.api_key = os.getenv('OPENAI_API_KEY')
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY not set")
@@ -39,6 +46,18 @@ class ScriptGenerator:
                 return file.read()
         except FileNotFoundError:
             raise FileNotFoundError(f"Prompt file not found: {path}")
+    
+    
+    def save_script(self, script: str) -> None:
+        """Save the generated description to a text file if a path is configured."""
+        if not self.output_script_path:
+            return
+        try:
+            os.makedirs(os.path.dirname(self.output_script_path), exist_ok=True)
+            with open(self.output_script_path, 'w', encoding='utf-8') as file:
+                file.write(script)
+        except OSError as e:
+            raise OSError(f"Failed to save description to {self.output_script_path}: {str(e)}")
 
     def extract_topic_info(self, topic: str) -> dict:
         """
@@ -52,7 +71,10 @@ class ScriptGenerator:
         prompt_template = self.read_prompt(self.prompt_paths['keyword'])
         full_prompt = f"{prompt_template.strip()} {topic.strip()}"
 
-        result = self.generate_text(prompt=full_prompt, model_name=self.model_name).lower()
+        result = self.generate_text(
+            prompt=full_prompt, 
+            config_key='keyword_model'
+        ).lower()
 
         # Parse result
         lines = result.splitlines()
@@ -173,9 +195,28 @@ class ScriptGenerator:
 
         return "\n".join(reference_text)
     
-    def generate_text(self, prompt: list, model_name:str= "gpt-4o-mini",
-                      temperature=0.55, max_tokens=512, top_p = 0.5) -> str:
-        """Generate text from LLM."""
+    def generate_text(self, prompt: str, config_key: str = 'default', number_of_words: int = None) -> str:
+        """Generate text from LLM using configuration."""
+        # Get model config based on config_key
+        if config_key == 'detailed_model':
+            model_config = self.detailed_model_config
+        elif config_key == 'final_model':
+            model_config = self.final_model_config
+        elif config_key == 'keyword_model':
+            model_config = self.keyword_model_config
+        else:
+            model_config = {}
+        
+        # Default values
+        model_name = model_config.get('model_name', self.model_name)
+        temperature = model_config.get('temperature', 0.55)
+        max_tokens = model_config.get('max_tokens', 512)
+        top_p = model_config.get('top_p', 0.5)
+        
+        # Replace {number_of_words} in prompt if number_of_words is provided
+        if number_of_words is not None:
+            prompt = prompt.replace('{number_of_words}', str(number_of_words))
+        
         try:
             response = self.client.chat.completions.create(
                 model=model_name,
@@ -193,14 +234,22 @@ class ScriptGenerator:
         topic_info = self.extract_topic_info(topic)
         content = self.search_web(topic_info)
         reference = self.generate_reference(content)
+        
         detailed_prompt = self.read_prompt(self.prompt_paths['detailed']) + " " + reference
-        detailed_script = self.generate_text(prompt= detailed_prompt, model_name="gpt-4o-mini", 
-                                             temperature=1,
-                                             top_p=0.8, max_tokens=16000)
+        detailed_script = self.generate_text(
+            prompt=detailed_prompt, 
+            config_key='detailed_model'
+        )
+        
         final_prompt = self.read_prompt(self.prompt_paths['final']) + " " + detailed_script 
-        sub_final_script = self.generate_text(prompt=final_prompt,
-                                              model_name=self.model_name)
+        sub_final_script = self.generate_text(
+            prompt=final_prompt,
+            config_key='final_model',
+            number_of_words=self.number_of_words
+        )
+        
         final_script = self.extract_script(sub_final_script)
+        self.save_script(script=final_script)
         return final_script
 
     def extract_script(self, content: str) -> str:
@@ -213,5 +262,5 @@ if __name__ == "__main__":
     from src.Utils.utils import read_config
     config = read_config('config/config.yaml')
     generator = ScriptGenerator(config)
-    script = generator.generate_script("sách Bạn không thông minh lắm đâu")
+    script = generator.generate_script("sách Đắc nhân tâm")
     print(f"Generated script:\n{script}")
