@@ -10,6 +10,7 @@ import soundfile as sf
 import numpy as np
 
 from f5_tts.model import DiT
+
 from f5_tts.infer.utils_infer import (
     preprocess_ref_audio_text,
     load_vocoder,
@@ -132,8 +133,8 @@ if __name__ == "__main__":
 
     config = read_config(path="config/config.yaml")
     generator = AudioGenerator(config)
-    # Example usage
-    audio, _, audio_path = generator.infer_tts(text = test_script[:100])
+    
+    audio, _, audio_path = generator.infer_tts(text = test_script)
     print(f"Generated audio saved at {audio_path}")
 
 

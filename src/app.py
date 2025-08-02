@@ -4,7 +4,7 @@ sys.path.append("")
 import asyncio
 from src.script.description_generator import DescriptionGenerator
 from src.script.script_generator import ScriptGenerator
-from src.audio.audio_generator import generate_audio, AudioGenerator
+from src.audio_generator import generate_audio, AudioGenerator
 from src.captions.timed_captions_generator import CaptionGenerator
 from src.video.background_video_generator import VideoSearch
 from src.render.render_engine import VideoComposer
