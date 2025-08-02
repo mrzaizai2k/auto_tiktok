@@ -16,17 +16,18 @@ class VideoComposer:
             config: Configuration dictionary with video parameters.
         """
         self.config = config['video_composer']
-        self.output_video_path = config.get('output_video_path', 'rendered_video.mp4')
-        self.font_path = config.get('font_path', 'font/Neue-Einstellung-Bold.ttf')
-        self.font_size = config.get('font_size', 70)
-        self.text_color = config.get('text_color', 'white')
-        self.stroke_width = config.get('stroke_width', 2)
-        self.stroke_color = config.get('stroke_color', 'black')
-        self.text_position = config.get('text_position', ['center', 1800])
-        self.video_codec = config.get('video_codec', 'libx264')
-        self.audio_codec = config.get('audio_codec', 'aac')
-        self.fps = config.get('fps', 25)
-        self.preset = config.get('preset', 'veryfast')
+        self.output_video_path = self.config.get('output_video_path', 'rendered_video.mp4')
+        self.font_path = self.config.get('font_path', 'font/Neue-Einstellung-Bold.ttf')
+        self.font_size = self.config.get('font_size', 70)
+        self.text_color = self.config.get('text_color', 'white')
+        self.video_height = self.config.get('video_height')
+        self.stroke_width = self.config.get('stroke_width', 2)
+        self.stroke_color = self.config.get('stroke_color', 'black')
+        self.text_position = self.config.get('text_position', ['center', 1800])
+        self.video_codec = self.config.get('video_codec', 'libx264')
+        self.audio_codec = self.config.get('audio_codec', 'aac')
+        self.fps = self.config.get('fps', 25)
+        self.preset = self.config.get('preset', 'veryfast')
 
     def _create_video_clips(self, background_video_data: List[Tuple[Tuple[float, float], str]]) -> List[VideoFileClip]:
         """Create video clips from background video data.
@@ -43,7 +44,7 @@ class VideoComposer:
                 video_filename = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
                 if not download_file(video_url, video_filename):
                     continue
-                video_clip = VideoFileClip(video_filename).set_start(t1).set_end(t2)
+                video_clip = VideoFileClip(video_filename).set_start(t1).set_end(t2).resize(height=self.video_height)
                 visual_clips.append(video_clip)
             except Exception as e:
                 print(f"Error processing video {video_url}: {e}")
@@ -168,12 +169,12 @@ if __name__ == "__main__":
     
     # Example test data
     background_videos = [
-        ((0, 5), "https://cdn.pixabay.com/video/2024/08/30/228847_medium.mp4"),
-        ((5, 10), "https://videos.pexels.com/video-files/7550336/7550336-hd_1080_1920_30fps.mp4")
+        ((0, 1), "https://cdn.pixabay.com/video/2024/08/30/228847_medium.mp4"),
+        ((1, 2), "https://videos.pexels.com/video-files/7550336/7550336-hd_1080_1920_30fps.mp4")
     ]
     timed_captions = [
-        ((0, 5), "Hello, World!"),
-        ((5, 10), "Welcome to Video!")
+        ((0, 1), "Hello, World!"),
+        ((1, 2), "Welcome to Video!")
     ]
 
     test_config = read_config(path='config/test_config.yaml')

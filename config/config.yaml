@@ -48,7 +48,7 @@ video_search:
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
   target_duration: 15
   video_width: 1080
-  video_height: 1920
+  video_height: &video_height 1920
 
 video_composer:
   output_video_path: *out_video_path
@@ -58,6 +58,7 @@ video_composer:
   stroke_width: 4
   stroke_color: "black"
   text_position: ["center", 1200]
+  video_height: *video_height 
   video_codec: "libx264"
   audio_codec: "aac"
   fps: 25

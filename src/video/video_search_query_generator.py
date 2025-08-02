@@ -7,70 +7,111 @@ import re
 from openai import OpenAI
 from dotenv import load_dotenv
 from math import inf
+from difflib import SequenceMatcher
 from src.Utils.utils import read_config
 
 load_dotenv()
 
 
-
-def _normalize(text: str) -> str:
-    return re.sub(r'\s+', ' ', re.sub(r'[^\w\s]', ' ', text.lower())).strip()
+def _normalize_text(text: str) -> str:
+    """Normalize text for better matching by removing extra spaces and punctuation."""
+    # Remove punctuation and normalize spaces
+    text = re.sub(r'[^\w\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip().lower()
 
 def _words(text: str) -> List[str]:
-    return [w for w in _normalize(text).split() if w]
+    """Extract words from text."""
+    normalized = _normalize_text(text)
+    return normalized.split() if normalized else []
 
-def _levenshtein(a: str, b: str) -> int:
-    # classic DP
-    if a == b:
-        return 0
-    if not a:
-        return len(b)
-    if not b:
-        return len(a)
-    dp = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        prev, dp[0] = dp[0], i
-        for j, cb in enumerate(b, 1):
-            cur = prev if ca == cb else prev + 1
-            cur = min(cur, dp[j] + 1, dp[j - 1] + 1)
-            prev, dp[j] = dp[j], cur
-    return dp[-1]
+def _levenshtein_similarity(s1: str, s2: str) -> float:
+    """Calculate similarity using SequenceMatcher (similar to Levenshtein but faster)."""
+    return SequenceMatcher(None, s1, s2).ratio()
 
-def _similarity(a: str, b: str) -> float:
-    if not a and not b:
-        return 1.0
-    dist = _levenshtein(a, b)
-    return 1.0 - dist / max(len(a), len(b))
-
-def _best_end_caption_index_by_tail(
-    last_tail: str,
+def _find_sentence_boundaries(
+    sentence: str,
     captions: List[Tuple[Tuple[float, float], str]],
-    start_idx: int,
-    tail_size_each_caption: int = 3,
-    min_similarity: float = 0.55,
-    max_lookahead: int = 200
-) -> int:
+    start_search_idx: int = 0,
+    window_size: int = 10,
+    min_similarity: float = 0.6
+) -> Tuple[int, int]:
     """
-    Find the caption index whose *tail* best matches the last 3 words (or fewer) of the sentence.
+    Find start and end caption indices for a sentence using sliding window + similarity.
+    
+    Returns:
+        Tuple of (start_idx, end_idx) or (-1, -1) if not found
     """
-    best_idx = -1
-    best_sim = -inf
-    last_tail_norm = _normalize(last_tail)
+    sentence_words = _words(sentence)
+    if not sentence_words:
+        return -1, -1
+    
+    sentence_text = " ".join(sentence_words)
+    best_start = -1
+    best_end = -1
+    best_score = 0
+    
+    # Search within a sliding window to avoid matching too far away
+    search_end = min(len(captions), start_search_idx + window_size * 2)
+    
+    for start_idx in range(start_search_idx, search_end):
+        # Try different window sizes for matching
+        for window in range(1, min(window_size, len(captions) - start_idx + 1)):
+            end_idx = start_idx + window - 1
+            
+            # Combine caption texts in this window
+            window_texts = []
+            for i in range(start_idx, end_idx + 1):
+                window_texts.append(captions[i][1])
+            
+            combined_caption = " ".join(window_texts)
+            combined_caption_normalized = _normalize_text(combined_caption)
+            
+            # Calculate similarity
+            similarity = _levenshtein_similarity(sentence_text, combined_caption_normalized)
+            
+            if similarity > best_score and similarity >= min_similarity:
+                best_score = similarity
+                best_start = start_idx
+                best_end = end_idx
+    
+    return best_start, best_end
 
-    end_idx = min(len(captions), start_idx + max_lookahead)
-    for i in range(start_idx, end_idx):
-        cap_text = captions[i][1]
-        cap_tail_words = _words(cap_text)[-tail_size_each_caption:]  # last N words of this caption
-        cap_tail = " ".join(cap_tail_words)
-        sim = _similarity(last_tail_norm, _normalize(cap_tail))
-        if sim > best_sim:
-            best_sim = sim
-            best_idx = i
-
-    if best_sim >= min_similarity:
-        return best_idx
-    # fallback: still return the best we can find (avoid None); caller can decide to reject & retry
-    return best_idx
+def _find_best_match_progressive(
+    sentence: str,
+    captions: List[Tuple[Tuple[float, float], str]],
+    start_search_idx: int = 0,
+    max_window: int = 15,
+    min_similarity: float = 0.5
+) -> Tuple[int, int, float]:
+    """
+    Progressive search: start with high similarity and small window, 
+    then gradually relax constraints.
+    """
+    sentence_words = _words(sentence)
+    if not sentence_words:
+        return -1, -1, 0.0
+    
+    sentence_text = " ".join(sentence_words)
+    
+    # Progressive search with decreasing similarity thresholds
+    similarity_thresholds = [0.8, 0.7, 0.6, min_similarity]
+    window_sizes = [5, 8, 12, max_window]
+    
+    for sim_threshold in similarity_thresholds:
+        for window_size in window_sizes:
+            start_idx, end_idx = _find_sentence_boundaries(
+                sentence, captions, start_search_idx, window_size, sim_threshold
+            )
+            
+            if start_idx != -1:
+                # Calculate actual similarity for the found match
+                window_texts = [captions[i][1] for i in range(start_idx, end_idx + 1)]
+                combined_caption = _normalize_text(" ".join(window_texts))
+                actual_similarity = _levenshtein_similarity(sentence_text, combined_caption)
+                return start_idx, end_idx, actual_similarity
+    
+    return -1, -1, 0.0
 
 
 class VideoKeywordGenerator:
@@ -144,52 +185,99 @@ class VideoKeywordGenerator:
 
     # ----------------- Time Mapping -------------------
     def time_mapping(
-        self,
-        formatted_result: List[Tuple[str, List[str]]],
-        captions: List[Tuple[Tuple[float, float], str]],
-        *,
-        last_n_tail_words: int = 3,
-        min_similarity: float = 0.7,
-        max_lookahead: int = 200
-    ) -> List[Tuple[float, float, List[str]]]:
+            self,
+            formatted_result: List[Tuple[str, List[str]]],
+            captions: List[Tuple[Tuple[float, float], str]],
+            *,
+            min_similarity: float = 0.5,
+            max_window: int = 15,
+            overlap_tolerance: float = 0.5
+        ) -> List[Tuple[float, float, List[str]]]:
         """
-        Map each (sentence, keywords) to timestamps using
-        the last N words + Levenshtein similarity to decide the end time.
+        Map each (sentence, keywords) to timestamps using sliding window + Levenshtein similarity.
+        
+        Args:
+            formatted_result: List of (sentence, keywords) tuples
+            captions: List of ((start_time, end_time), caption_text) tuples
+            min_similarity: Minimum similarity threshold for matching
+            max_window: Maximum window size for searching
+            overlap_tolerance: Tolerance for overlapping matches (in seconds)
+        
+        Returns:
+            List of (start_time, end_time, keywords) tuples
         """
+        if not formatted_result or not captions:
+            return []
+        
         results: List[Tuple[float, float, List[str]]] = []
-        caption_idx = 0  # pointer to where we are in captions
-
-        for sentence, keywords in formatted_result:
-            sent_tokens = _words(sentence)
-            if not sent_tokens:
+        last_used_idx = 0
+        
+        for i, (sentence, keywords) in enumerate(formatted_result):
+            if not sentence.strip():
                 continue
-
-            # START time: the next available caption's start
-            if caption_idx >= len(captions):
-                # nothing left to map => break
-                break
-            start_time = captions[caption_idx][0][0]
-
-            # END time: find by last_n_tail_words matching
-            tail = " ".join(sent_tokens[-last_n_tail_words:])
-            end_idx = _best_end_caption_index_by_tail(
-                last_tail=tail,
+            
+            # Check if this is the last sentence
+            is_last_sentence = (i == len(formatted_result) - 1)
+            
+            # Find the best match for this sentence
+            start_idx, end_idx, similarity = _find_best_match_progressive(
+                sentence=sentence,
                 captions=captions,
-                start_idx=caption_idx,
-                tail_size_each_caption=min(last_n_tail_words, 3),
-                min_similarity=min_similarity,
-                max_lookahead=max_lookahead
+                start_search_idx=last_used_idx,
+                max_window=max_window,
+                min_similarity=min_similarity
             )
-
-            if end_idx == -1:
-                # couldn't map; let validator force a retry
-                end_time = captions[-1][0][1]
+            
+            if start_idx == -1:
+                # Fallback: couldn't find good match
+                if results:
+                    # Use time after the last result
+                    last_end_time = results[-1][1]
+                    # Try to estimate duration based on sentence length
+                    estimated_duration = max(2.0, len(_words(sentence)) * 0.3)
+                    start_time = last_end_time
+                    
+                    # For last sentence, extend to the very end of captions
+                    if is_last_sentence:
+                        end_time = captions[-1][0][1]
+                    else:
+                        end_time = start_time + estimated_duration
+                else:
+                    # First sentence, use beginning of captions
+                    start_time = captions[0][0][0]
+                    
+                    # If it's also the last sentence (only one sentence), use full duration
+                    if is_last_sentence:
+                        end_time = captions[-1][0][1]
+                    else:
+                        end_time = captions[min(5, len(captions)-1)][0][1]
+                
+                print(f"Warning: Could not find good match for sentence {i+1}: '{sentence[:50]}...'")
+                print(f"Using fallback timing: {start_time}-{end_time}")
             else:
-                end_time = captions[end_idx][0][1]
-                caption_idx = end_idx + 1  # advance pointer
-
-            results.append((round(start_time, 2), round(end_time, 2), keywords))
-
+                start_time = captions[start_idx][0][0]
+                
+                # For the last sentence, always extend to the end of all captions
+                if is_last_sentence:
+                    end_time = captions[-1][0][1]
+                    print(f"Last sentence - extending to final caption time: {end_time}")
+                else:
+                    end_time = captions[end_idx][0][1]
+                
+                # Update the search starting point for next sentence
+                # Allow some overlap to handle cases where sentences share some words
+                overlap_captions = int(overlap_tolerance / 0.5)  # Rough estimate
+                last_used_idx = max(last_used_idx, end_idx - overlap_captions)
+                
+                # print(f"Matched sentence {i+1} (similarity: {similarity:.2f}): "
+                #     f"'{sentence[:30]}...' -> {start_time}-{end_time}s")
+            
+            results.append((
+                round(start_time, 2),
+                round(end_time, 2),
+                keywords
+            ))
+        
         return results
 
     # ----------------- Validation -------------------
@@ -257,8 +345,12 @@ def create_example_captions():
     test_config = read_config(path='config/test_config.yaml')
     from src.captions.timed_captions_generator import CaptionGenerator
 
-    test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
-    test_script = test_config['test_script']  
+    # test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
+    # test_script = test_config['test_script']  
+
+    test_audio_path = 'output/audio_tts.wav'  # Example path
+    with open("output/script.txt", 'r', encoding='utf-8') as f:
+        test_script = f.read().strip()
 
     config = read_config(path='config/config.yaml')
     generator = CaptionGenerator(config)
