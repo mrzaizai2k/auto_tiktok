@@ -124,43 +124,43 @@ class VideoComposer:
         Returns:
             Path to output video file or None if failed.
         """
-        # try:
-        visual_clips = self._create_video_clips(background_video_urls)
-        if not visual_clips:
-            print("No valid video clips created")
-            return None
-
-        visual_clips.extend(self._create_text_clips(timed_captions))
-        video = CompositeVideoClip(visual_clips)
-
-        audio_clips = self._create_audio_clip(audio_file_path)
-        if audio_clips:
-            try:
-                audio = CompositeAudioClip(audio_clips)
-                video.duration = audio.duration
-                video.audio = audio
-            except Exception as e:
-                print(f"Error processing audio: {e}")
+        try:
+            visual_clips = self._create_video_clips(background_video_urls)
+            if not visual_clips:
+                print("No valid video clips created")
                 return None
 
-        # try:
-        video.write_videofile(
-            self.output_video_path,
-            codec=self.video_codec,
-            audio_codec=self.audio_codec,
-            fps=self.fps,
-            preset=self.preset
-        )
-        # except Exception as e:
-        #     print(f"Error writing video file {self.output_video_path}: {e}")
-        #     return None
+            visual_clips.extend(self._create_text_clips(timed_captions))
+            video = CompositeVideoClip(visual_clips)
 
-        self._cleanup_temp_files(background_video_urls)
-        return self.output_video_path
+            audio_clips = self._create_audio_clip(audio_file_path)
+            if audio_clips:
+                try:
+                    audio = CompositeAudioClip(audio_clips)
+                    video.duration = audio.duration
+                    video.audio = audio
+                except Exception as e:
+                    print(f"Error processing audio: {e}")
+                    return None
 
-        # except Exception as e:
-        #     print(f"Unexpected error in compose_video: {e}")
-        #     return None
+            try:
+                video.write_videofile(
+                    self.output_video_path,
+                    codec=self.video_codec,
+                    audio_codec=self.audio_codec,
+                    fps=self.fps,
+                    preset=self.preset
+                )
+            except Exception as e:
+                print(f"Error writing video file {self.output_video_path}: {e}")
+                return None
+
+            self._cleanup_temp_files(background_video_urls)
+            return self.output_video_path
+
+        except Exception as e:
+            print(f"Unexpected error in compose_video: {e}")
+            return None
 
 if __name__ == "__main__":
     config = read_config(path='config/config.yaml')

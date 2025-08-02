@@ -12,10 +12,7 @@ from src.video.video_search_query_generator import VideoKeywordGenerator
 from src.Utils.utils import read_config, check_path
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description="Generate a video from a topic.")
-    # parser.add_argument("topic", type=str, help="The topic for the video")
 
-    # args = parser.parse_args()
     topic = "sách Đắc Nhân Tâm" 
 
     config = read_config(path='config/config.yaml')
