@@ -6,6 +6,7 @@ from whisper_timestamped import load_model, transcribe_timestamped
 import re
 import os
 from src.Utils.utils import read_config, levenshtein_distance
+import librosa
 
 class CaptionGenerator:
     """Generates timed captions from audio using Whisper model and creates SRT file if configured."""
@@ -21,16 +22,36 @@ class CaptionGenerator:
             FileNotFoundError: If Whisper model fails to load
         """
         self.config = config['caption_generator']
-        self.model_size = config.get('whisper_model_size', 'base')
-        self.max_caption_size = config.get('max_caption_size', 15)
-        self.consider_punctuation = config.get('consider_punctuation', False)
-        self.language = config.get('language', 'vi')  # Vietnamese as default
+        self.model_size = self.config.get('whisper_model_size', 'base')
+        self.max_caption_size = self.config.get('max_caption_size', 15)
+        self.consider_punctuation = self.config.get('consider_punctuation', False)
+        self.language = self.config.get('language', 'vi')  # Vietnamese as default
         self.srt_file_path = self.config.get('srt_file_path', None)
         
         try:
             self.whisper_model = load_model(self.model_size)
         except Exception as e:
             raise ValueError(f"Failed to load Whisper model: {str(e)}")
+
+    def get_video_length(self, audio_filename: str) -> float:
+        """Get the duration of the audio file in seconds.
+        
+        Args:
+            audio_filename (str): Path to audio file
+            
+        Returns:
+            float: Duration of the audio file in seconds
+            
+        Raises:
+            FileNotFoundError: If audio file is not found
+            ValueError: If duration cannot be determined
+        """
+        try:
+            if not os.path.exists(audio_filename):
+                raise FileNotFoundError(f"Audio file not found: {audio_filename}")
+            return librosa.get_duration(filename=audio_filename)
+        except Exception as e:
+            raise ValueError(f"Failed to get video length: {str(e)}")
 
     def split_words_by_size(self, words: List[str], max_caption_size: int) -> List[str]:
         """Split words into captions based on maximum caption size.
@@ -138,12 +159,17 @@ class CaptionGenerator:
                 words = text.split()
                 words = [self.clean_word(word) for word in self.split_words_by_size(words, self.max_caption_size)]
             
-            for word in words:
+            video_length = self.get_video_length(audio_filename)
+            for i, word in enumerate(words):
                 position += len(word) + 1
                 end_time = self.interpolate_time_from_dict(position, word_location_to_time)
                 if end_time and word:
-                    captions.append(((start_time, end_time), word))
-                    start_time = end_time
+                    if i == len(words) - 1:  # Last caption
+                        captions.append(((start_time, video_length), word))
+                    else:
+                        captions.append(((start_time, end_time), word))
+                        start_time = end_time
+                    
 
             if script_text:
                 captions = self.correct_timed_captions(script_text, captions)
@@ -248,18 +274,20 @@ class CaptionGenerator:
         return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 if __name__ == "__main__":
-    try:
-        config = read_config(path='config/config.yaml')
-        generator = CaptionGenerator(config)
 
-        test_config = read_config(path='config/test_config.yaml')
-        test_audio_path = test_config['test_audio_path']
-        test_script = test_config['test_script']
-    
-        captions = generator.generate_timed_captions(test_audio_path, test_script)
-        print(f"Captions:")
-        for (start, end), caption in captions:
-            print(f"[{start:.2f}s - {end:.2f}s]: {caption}")
+    config = read_config(path='config/config.yaml')
+    generator = CaptionGenerator(config)
 
-    except Exception as e:
-        print(f"Error: {str(e)}")
+    test_config = read_config(path='config/test_config.yaml')
+
+    # test_audio_path = test_config['test_audio_path']
+    # test_script = test_config['test_script']
+
+    test_audio_path = 'output/audio_tts.wav'
+    with open('output/script.txt', 'r', encoding='utf-8') as f:
+        test_script = f.read().strip()
+
+    captions = generator.generate_timed_captions(test_audio_path, test_script)
+    print(f"Captions:")
+    for (start, end), caption in captions:
+        print(f"[{start:.2f}s - {end:.2f}s]: {caption}")

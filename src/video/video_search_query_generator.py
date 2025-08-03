@@ -29,6 +29,59 @@ def _levenshtein_similarity(s1: str, s2: str) -> float:
     """Calculate similarity using SequenceMatcher (similar to Levenshtein but faster)."""
     return SequenceMatcher(None, s1, s2).ratio()
 
+def fill_time_gaps(
+    results: List[Tuple[float, float, List[str]]],
+    captions: List[Tuple[Tuple[float, float], str]],
+    gap_threshold: float = 0.1
+) -> List[Tuple[float, float, List[str]]]:
+    """
+    Fill gaps between time spans by extending previous spans or connecting to next spans.
+    
+    Args:
+        results: List of (start_time, end_time, keywords) tuples
+        captions: Original captions for reference
+        gap_threshold: Minimum gap size to consider filling (in seconds)
+    
+    Returns:
+        List of (start_time, end_time, keywords) with gaps filled
+    """
+    if not results:
+        return results
+    
+    filled_results = []
+    
+    for i in range(len(results)):
+        start_time, end_time, keywords = results[i]
+        
+        # For the first span, ensure it starts from the beginning
+        if i == 0 and captions:
+            first_caption_start = captions[0][0][0]
+            if start_time > first_caption_start + gap_threshold:
+                start_time = first_caption_start
+                print(f"Extended first span to start from {first_caption_start}")
+        
+        # Check for gap with next span
+        if i < len(results) - 1:
+            next_start_time = results[i + 1][0]
+            gap_size = next_start_time - end_time
+            
+            if gap_size > gap_threshold:
+                # Extend current span to fill the gap
+                end_time = next_start_time
+                print(f"Filled gap of {gap_size:.2f}s by extending span {i+1} to {end_time}")
+        
+        # For the last span, ensure it goes to the very end
+        elif captions:  # This is the last span
+            last_caption_end = captions[-1][0][1]
+            if end_time < last_caption_end - gap_threshold:
+                end_time = last_caption_end
+                print(f"Extended last span to end at {last_caption_end}")
+        
+        filled_results.append((round(start_time, 2), round(end_time, 2), keywords))
+    
+    return filled_results
+
+
 def _find_sentence_boundaries(
     sentence: str,
     captions: List[Tuple[Tuple[float, float], str]],
@@ -201,6 +254,7 @@ class VideoKeywordGenerator:
         ) -> List[Tuple[float, float, List[str]]]:
         """
         Map each (sentence, keywords) to timestamps using sliding window + Levenshtein similarity.
+        Includes gap filling to eliminate empty time spans.
         
         Args:
             formatted_result: List of (sentence, keywords) tuples
@@ -210,7 +264,7 @@ class VideoKeywordGenerator:
             overlap_tolerance: Tolerance for overlapping matches (in seconds)
         
         Returns:
-            List of (start_time, end_time, keywords) tuples
+            List of (start_time, end_time, keywords) tuples with no gaps
         """
         if not formatted_result or not captions:
             return []
@@ -284,8 +338,10 @@ class VideoKeywordGenerator:
                 keywords
             ))
         
-        return results
-
+        # Fill gaps to eliminate empty/black spans
+        filled_results = fill_time_gaps(results, captions)
+        
+        return filled_results
     # ----------------- Validation -------------------
     def validate_mapping(self, mapping: List[Tuple[float, float, List[str]]]) -> bool:
         """

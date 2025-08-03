@@ -220,7 +220,8 @@ if __name__ == "__main__":
     search_terms = [
         (0, 4.28, ['impactful book', 'communication change', 'interpersonal interaction']),
         (4.28, 74.8, ['How to Win Friends', 'Dale Carnegie', 'famous author']),
-        (74.8, 117.34, ['true story', 'powerful principles', 'ordinary man']),
+        (74.8, 124.14, ['true story', 'powerful principles', 'ordinary man']),
+        (124.14, 128.32, ['false living', 'losing identity', 'inauthentic existence'])
     ]
     
     print("=== Testing Unified VideoSearch (Pexels with Pixabay fallback) ===")
