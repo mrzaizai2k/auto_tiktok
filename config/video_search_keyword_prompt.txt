@@ -3,7 +3,7 @@ Instructions:
 You will receive a long Vietnamese transcript without timestamps.  
 Your task is to generate three visually concrete and specific English keywords for each video segment.  
 Each segment should describe about 5-10 words (representing 2–4 seconds of video).  
-The keywords must be short, highly visual, and capture the main essence of the text. They can be synonyms or related terms.  
+The keywords must be short (2-5 words), highly visual, and capture the main essence of the text. They can be synonyms or related terms.  
 
 If a keyword is a single word, expand it into a two-word visually concrete phrase.  
 If a section contains multiple ideas, split it into smaller text blocks with a set of keywords for each.  

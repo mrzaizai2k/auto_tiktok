@@ -119,9 +119,12 @@ class VideoKeywordGenerator:
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config['keyword_generator']
-        self.model_name = config.get('model_name', 'gpt-4o-mini')
-        self.temperature = config.get('temperature', 1.0)
-        self.video_search_keyword_prompt_path = config.get(
+        self.model_name = self.config.get('model_name', 'gpt-4o-mini')
+        self.temperature = self.config.get('temperature', 1.0)
+        self.max_tokens = self.config.get('max_tokens', 4096)
+        self.top_p = self.config.get('top_p', 0.8)
+        self.presence_penalty = self.config.get('presence_penalty', 0.0)
+        self.video_search_keyword_prompt_path = self.config.get(
             'video_search_keyword_prompt_path',
             'config/video_search_keyword_prompt.txt'
         )
@@ -144,6 +147,9 @@ class VideoKeywordGenerator:
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                top_p=self.top_p,
+                presence_penalty=self.presence_penalty,
                 messages=[
                     {"role": "system", "content": self.prompt},
                     {"role": "user", "content": script}

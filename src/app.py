@@ -22,8 +22,11 @@ if __name__ == "__main__":
     check_path(output_audio_path)
     check_path(output_video_path)
 
-    script_generator = ScriptGenerator(config)
-    script = script_generator.generate_script(topic)
+    # script_generator = ScriptGenerator(config)
+    # script = script_generator.generate_script(topic)
+
+    with open('output/script.txt', 'r', encoding='utf-8') as file:
+        script = file.read().strip()
 
     description_generator = DescriptionGenerator(config)
     description = description_generator.generate_description(script)

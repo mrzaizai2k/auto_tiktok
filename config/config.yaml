@@ -39,16 +39,20 @@ caption_generator:
 
 keyword_generator:
   model_name: gpt-4o-mini
-  temperature: 1.0
+  temperature: 0.3
+  max_tokens: 4096
+  top_p: 0.3
+  presence_penalty: 0.1
+
   video_search_keyword_prompt_path: config/video_search_keyword_prompt.txt
 
 video_search:
   url: "https://api.pexels.com/videos/search"
   per_page: 15
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-  target_duration: 15
   video_width: 1080
   video_height: &video_height 1920
+  ratio_threshold: 0.1 # Aspect ratio threshold for filtering videos
 
 video_composer:
   output_video_path: *out_video_path

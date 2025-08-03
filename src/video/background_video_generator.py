@@ -27,11 +27,11 @@ class VideoSearchBase(ABC):
         """
         try:
             self.config = config["video_search"]
-            self.per_page = self.config['per_page']
-            self.target_duration = self.config['target_duration']
-            self.video_width = self.config['video_width']
-            self.video_height = self.config['video_height']
-            self.user_agent = self.config['user_agent']
+            self.per_page = self.config.get('per_page', 15)
+            self.video_width = self.config.get('video_width', 1920)
+            self.video_height = self.config.get('video_height', 1080)
+            self.user_agent = self.config.get('user_agent', 'Mozilla/5.0')
+            self.ratio_threshold = self.config.get('ratio_threshold', 0.1)  # Aspect ratio threshold for filtering videos
         except KeyError as e:
             raise KeyError(f"Missing configuration key: {e}")
 
@@ -87,9 +87,10 @@ class PexelsVideoSearch(VideoSearchBase):
             return response.json()
         except requests.RequestException as e:
             raise requests.RequestException(f"Pexels API request failed: {e}")
-
-    def get_best_video(self, query: str, used_vids: List[str] = None) -> Optional[str]:
-        used_vids = used_vids or []
+    
+    def get_best_video(self, query: str, used_vids: List[str] = None, 
+                    duration: float = None) -> Optional[str]:
+        used_vids = used_vids or [] 
         try:
             vids = self.search_videos(query)
             videos = vids.get('videos', [])
@@ -99,21 +100,14 @@ class PexelsVideoSearch(VideoSearchBase):
                 video for video in videos 
                 if (video['width'] >= self.video_width and 
                     video['height'] >= self.video_height and 
-                    abs(video['width']/video['height'] - aspect_ratio) < 0.01)
+                    abs(video['width']/video['height'] - aspect_ratio) < self.ratio_threshold and
+                    (not duration or int(video['duration']) >= duration))
             ]
             
-            sorted_videos = sorted(
-                filtered_videos, 
-                key=lambda x: abs(self.target_duration - int(x['duration']))
-            )
-            
-            for video in sorted_videos:
+            for video in filtered_videos:
                 for video_file in video['video_files']:
-                    if (video_file['width'] == self.video_width and 
-                        video_file['height'] == self.video_height and 
-                        video_file['link'].split('.hd')[0] not in used_vids):
+                    if (video_file['link'].split('.hd')[0] not in used_vids):
                         return video_file['link']
-            
             print(f"No suitable videos found for query: {query} on Pexels")
             return None
         except Exception as e:
@@ -147,7 +141,8 @@ class PixabayVideoSearch(VideoSearchBase):
         except requests.RequestException as e:
             raise requests.RequestException(f"Pixabay API request failed: {e}")
 
-    def get_best_video(self, query: str, used_vids: List[str] = None) -> Optional[str]:
+    def get_best_video(self, query: str, used_vids: List[str] = None,
+                   duration: float = None) -> Optional[str]:
         used_vids = used_vids or []
         try:
             vids = self.search_videos(query)
@@ -158,15 +153,11 @@ class PixabayVideoSearch(VideoSearchBase):
                 video for video in videos 
                 if (video['videos']['medium']['width'] >= self.video_width and 
                     video['videos']['medium']['height'] >= self.video_height and 
-                    abs(video['videos']['medium']['width']/video['videos']['medium']['height'] - aspect_ratio) < 0.01)
+                    abs(video['videos']['medium']['width']/video['videos']['medium']['height'] - aspect_ratio) < self.ratio_threshold and
+                    (not duration or video['duration'] >= duration))
             ]
             
-            sorted_videos = sorted(
-                filtered_videos, 
-                key=lambda x: abs(self.target_duration - int(x['duration']))
-            )
-            
-            for video in sorted_videos:
+            for video in filtered_videos:
                 video_url = video['videos']['medium']['url']
                 if video_url and video_url.split('.mp4')[0] not in used_vids:
                     return video_url
@@ -176,7 +167,7 @@ class PixabayVideoSearch(VideoSearchBase):
         except Exception as e:
             print(f"Error processing Pixabay videos for query {query}: {e}")
             return None
-
+        
 class VideoSearch:
     """Unified video search interface using Pexels as default, falling back to Pixabay."""
     
@@ -198,17 +189,25 @@ class VideoSearch:
             
         for t1, t2, search_terms in timed_video_searches:
             url = None
+            duration = abs(t2 - t1)
             for query in search_terms:
                 # Try Pexels first
-                url = self.pexels.get_best_video(query, used_vids=used_links)
+                url = self.pexels.get_best_video(query=query, 
+                                                 used_vids=used_links,
+                                                 duration=duration)
                 if url:
                     used_links.append(url.split('.hd')[0])
                     break
-                # Fallback to Pixabay
-                url = self.pixabay.get_best_video(query, used_vids=used_links)
-                if url:
-                    used_links.append(url.split('.mp4')[0])
-                    break
+
+            if not url:
+                for query in search_terms:
+                    # Fallback to Pixabay
+                    url = self.pixabay.get_best_video(query=query, 
+                                                    used_vids=used_links, 
+                                                    duration=duration)
+                    if url:
+                        used_links.append(url.split('.mp4')[0])
+                        break
             timed_video_urls.append([[t1, t2], url])
         
         return timed_video_urls
@@ -220,12 +219,12 @@ if __name__ == "__main__":
     video_search = VideoSearch(config)
     search_terms = [
         (0, 4.28, ['impactful book', 'communication change', 'interpersonal interaction']),
-        (4.28, 14.8, ['"How to Win Friends"', 'Dale Carnegie', 'famous author']),
-        (14.8, 17.34, ['true story', 'powerful principles', 'ordinary man']),
+        (4.28, 74.8, ['How to Win Friends', 'Dale Carnegie', 'famous author']),
+        (74.8, 117.34, ['true story', 'powerful principles', 'ordinary man']),
     ]
     
     print("=== Testing Unified VideoSearch (Pexels with Pixabay fallback) ===")
-    video_urls = video_search.generate_video_urls(search_terms)
+    video_urls = video_search.generate_video_urls(timed_video_searches=search_terms)
     for item in video_urls:
         print(item)
     
