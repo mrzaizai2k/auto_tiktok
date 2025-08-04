@@ -34,7 +34,7 @@ caption_generator:
   whisper_model_size: base
   max_caption_size: 15
   language: vi
-  consider_punctuation: false
+  consider_punctuation: true
   srt_file_path: output/captions.srt # Can be None
 
 keyword_generator:

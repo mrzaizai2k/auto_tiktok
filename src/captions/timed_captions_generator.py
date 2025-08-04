@@ -49,7 +49,7 @@ class CaptionGenerator:
         try:
             if not os.path.exists(audio_filename):
                 raise FileNotFoundError(f"Audio file not found: {audio_filename}")
-            return librosa.get_duration(filename=audio_filename)
+            return librosa.get_duration(path=audio_filename)
         except Exception as e:
             raise ValueError(f"Failed to get video length: {str(e)}")
 
@@ -85,7 +85,7 @@ class CaptionGenerator:
         Returns:
             str: Cleaned word
         """
-        return re.sub(r'[^\w\s\-_"\'\']', '', word)
+        return re.sub(r'[^\w\s\-_"\'\']', ' ', word)
 
     def get_timestamp_mapping(self, whisper_analysis: Dict[str, Any]) -> Dict[Tuple[int, int], float]:
         """Create mapping of word positions to timestamps.
@@ -120,6 +120,8 @@ class CaptionGenerator:
                 return value
         return None
 
+
+
     def generate_timed_captions(self, audio_filename: str, script_text: str = None) -> List[Tuple[Tuple[float, float], str]]:
         """Generate timed captions from audio file and optionally correct with script text.
         
@@ -145,7 +147,7 @@ class CaptionGenerator:
                 fp16=False,
                 language=self.language
             )
-            
+
             word_location_to_time = self.get_timestamp_mapping(whisper_analysis)
             position = 0
             start_time = 0
@@ -169,7 +171,8 @@ class CaptionGenerator:
                     else:
                         captions.append(((start_time, end_time), word))
                         start_time = end_time
-                    
+            
+            original_captions = captions.copy()
 
             if script_text:
                 captions = self.correct_timed_captions(script_text, captions)
@@ -182,12 +185,15 @@ class CaptionGenerator:
         except Exception as e:
             raise ValueError(f"Failed to generate captions: {str(e)}")
 
-    def correct_timed_captions(self, script_text: str, captions: List[Tuple[Tuple[float, float], str]]) -> List[Tuple[Tuple[float, float], str]]:
+    def correct_timed_captions(self, script_text: str, captions: List[Tuple[Tuple[float, float], str]], 
+                               window_size: int = 50, lookahead_words: int = 5) -> List[Tuple[Tuple[float, float], str]]:
         """Correct timed captions to match the provided script text while preserving original timestamps.
         
         Args:
             script_text (str): The correct script text to align captions with
             captions (List[Tuple[Tuple[float, float], str]]): List of timed captions
+            window_size (int): Number of words to consider after the current pointer
+            lookahead_words (int): Number of additional words to compare for confirming best match
             
         Returns:
             List[Tuple[Tuple[float, float], str]]: Corrected list of (time range, caption) pairs
@@ -200,13 +206,19 @@ class CaptionGenerator:
                 raise ValueError("Script text must be a non-empty string")
             if not captions or not isinstance(captions, list):
                 raise ValueError("Captions must be a non-empty list of timed caption tuples")
+            if not isinstance(window_size, int) or window_size < 1:
+                raise ValueError("Window size must be a positive integer")
+            if not isinstance(lookahead_words, int) or lookahead_words < 1:
+                raise ValueError("Lookahead words must be a positive integer")
 
-            cleaned_script = re.sub(r'[^\w\s]', '', script_text).strip()
+            cleaned_script = re.sub(r'[^\w\s]|\n', ' ', script_text).strip()
             script_words = cleaned_script.split()
             if not script_words:
                 raise ValueError("Script text contains no valid words after cleaning")
 
             corrected_captions = []
+            current_word_idx = 0
+
             for timestamp, caption in captions:
                 caption_words = caption.split()
                 num_words = len(caption_words)
@@ -214,31 +226,66 @@ class CaptionGenerator:
                     corrected_captions.append((timestamp, caption))
                     continue
 
-                best_match = ""
-                best_score = -1
-                best_start_idx = 0
-
-                for i in range(len(script_words) - num_words + 1):
+                candidates = []
+                window_end = min(current_word_idx + window_size, len(script_words))
+                for i in range(current_word_idx, window_end - num_words + 1):
                     candidate_segment = ' '.join(script_words[i:i + num_words])
                     similarity = levenshtein_distance(caption.lower(), candidate_segment.lower())
                     max_length = max(len(caption), len(candidate_segment))
                     similarity_score = 1 - (similarity / max_length) if max_length > 0 else 0
                     
-                    if similarity_score > best_score:
-                        best_score = similarity_score
-                        best_match = candidate_segment
-                        best_start_idx = i
+                    if similarity_score > 0.8:
+                        candidates.append((i, candidate_segment, similarity_score))
+
+                best_match = ""
+                best_score = -1
+                best_start_idx = current_word_idx
+
+                if candidates:
+                    if len(candidates) == 1:
+                        best_start_idx, best_match, best_score = candidates[0]
+                    else:
+                        for i, candidate_segment, score in candidates:
+                            lookahead_end = min(i + num_words + lookahead_words, len(script_words))
+                            lookahead_segment = ' '.join(script_words[i:lookahead_end])
+                            next_caption_idx = min(len(captions) - 1, captions.index((timestamp, caption)) + 1)
+                            next_caption = captions[next_caption_idx][1] if next_caption_idx < len(captions) else ""
+                            combined_text = candidate_segment + " " + next_caption
+                            lookahead_similarity = levenshtein_distance(combined_text.lower(), lookahead_segment.lower())
+                            lookahead_max_length = max(len(combined_text), len(lookahead_segment))
+                            lookahead_score = 1 - (lookahead_similarity / lookahead_max_length) if lookahead_max_length > 0 else 0
+                            
+                            if lookahead_score > best_score:
+                                best_score = lookahead_score
+                                best_match = candidate_segment
+                                best_start_idx = i
 
                 if best_score < 0.4:
-                    corrected_captions.append((timestamp, caption))
+                    if current_word_idx + num_words <= len(script_words):
+                        best_match = ' '.join(script_words[current_word_idx:current_word_idx + num_words])
+                        corrected_captions.append((timestamp, best_match))
+                        current_word_idx += num_words
+                    else:
+                        corrected_captions.append((timestamp, caption))
                 else:
                     corrected_captions.append((timestamp, best_match))
+                    next_segment = ' '.join(script_words[best_start_idx:])
+                    next_caption_idx = min(len(captions) - 1, captions.index((timestamp, caption)) + 1)
+                    next_caption = captions[next_caption_idx][1] if next_caption_idx < len(captions) else ""
+                    next_similarity = levenshtein_distance(next_caption.lower(), next_segment.lower())
+                    next_max_length = max(len(next_caption), len(next_segment))
+                    next_score = 1 - (next_similarity / next_max_length) if next_max_length > 0 else 0
+                    if next_score >= best_score:
+                        current_word_idx = best_start_idx + len(best_match.split())
+                    else:
+                        current_word_idx = best_start_idx + num_words
 
             return corrected_captions
 
         except Exception as e:
             raise ValueError(f"Failed to correct captions: {str(e)}")
-
+    
+        
     def generate_srt_file(self, captions: List[Tuple[Tuple[float, float], str]], srt_file_path: str) -> None:
         """Generate an SRT file from timed captions.
         
