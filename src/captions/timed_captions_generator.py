@@ -185,14 +185,13 @@ class CaptionGenerator:
         except Exception as e:
             raise ValueError(f"Failed to generate captions: {str(e)}")
 
-    def correct_timed_captions(self, script_text: str, captions: List[Tuple[Tuple[float, float], str]], 
-                               window_size: int = 50, lookahead_words: int = 5) -> List[Tuple[Tuple[float, float], str]]:
+    def correct_timed_captions(self, script_text: str, captions: List[Tuple[Tuple[float, float], str]], window_size: int = 50, lookahead_words: int = 5) -> List[Tuple[Tuple[float, float], str]]:
         """Correct timed captions to match the provided script text while preserving original timestamps.
         
         Args:
             script_text (str): The correct script text to align captions with
             captions (List[Tuple[Tuple[float, float], str]]): List of timed captions
-            window_size (int): Number of words to consider after the current pointer
+            window_size (int): Number of words to consider around the current pointer (split forward and backward)
             lookahead_words (int): Number of additional words to compare for confirming best match
             
         Returns:
@@ -200,6 +199,20 @@ class CaptionGenerator:
             
         Raises:
             ValueError: If inputs are invalid or processing fails
+        
+        Flow Detail:
+            1. Validate inputs: Ensure script_text is a non-empty string, captions is a non-empty list, and window_size/lookahead_words are positive integers.
+            2. Clean script_text: Remove punctuation and newlines, split into words.
+            3. Initialize corrected_captions list and current_word_idx pointer.
+            4. For each caption and timestamp:
+                a. Skip empty captions, appending them unchanged.
+                b. Calculate similarity scores for candidate segments within a window centered around current_word_idx (from current_word_idx - window_size/2 to current_word_idx + window_size/2).
+                c. Collect candidates with similarity score > 0.8.
+                d. If multiple candidates, compare lookahead_words with the next caption to select the best match.
+                e. If no good match (best_score < 0.4), use words from current_word_idx or keep original caption if insufficient words remain.
+                f. Append best match with original timestamp to corrected_captions.
+                g. Update current_word_idx by comparing the next caption with the remaining script to confirm the best match position.
+            5. Return corrected_captions.
         """
         try:
             if not script_text or not isinstance(script_text, str):
@@ -227,8 +240,9 @@ class CaptionGenerator:
                     continue
 
                 candidates = []
-                window_end = min(current_word_idx + window_size, len(script_words))
-                for i in range(current_word_idx, window_end - num_words + 1):
+                window_start = max(0, current_word_idx - window_size // 2)
+                window_end = min(current_word_idx + window_size // 2, len(script_words))
+                for i in range(window_start, window_end - num_words + 1):
                     candidate_segment = ' '.join(script_words[i:i + num_words])
                     similarity = levenshtein_distance(caption.lower(), candidate_segment.lower())
                     max_length = max(len(caption), len(candidate_segment))
