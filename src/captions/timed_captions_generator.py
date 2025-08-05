@@ -172,7 +172,7 @@ class CaptionGenerator:
                         captions.append(((start_time, end_time), word))
                         start_time = end_time
             
-            original_captions = captions.copy()
+            # original_captions = captions.copy()
 
             if script_text:
                 captions = self.correct_timed_captions(script_text, captions)
