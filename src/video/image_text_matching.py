@@ -7,8 +7,8 @@ from torch.nn import functional as F
 from transformers import AutoProcessor, AutoModelForCausalLM
 import requests
 from io import BytesIO
-from typing import List, Dict, Any, Optional, Tuple, Literal
-from src.Utils.utils import timeit, read_config
+from typing import List, Optional, Tuple, Literal
+from src.Utils.utils import timeit, read_config, take_device
 
 class ImageTextSimilarity:
     """Class to compute similarity scores between images and text using a pre-trained model."""
@@ -25,7 +25,7 @@ class ImageTextSimilarity:
         self.processor= None
         self.text_prompt = "<|user|>\n<sent>\nSummary above sentence: <|end|>\n<|assistant|>\n"
         self.img_prompt = "<|user|>\n<|image_1|>\nSummary above image: <|end|>\n<|assistant|>\n"
-
+        self.device = take_device()
         self.load_model()
 
 
@@ -33,7 +33,7 @@ class ImageTextSimilarity:
         """Load the model and processor from the configured base model path."""
         self.model = AutoModelForCausalLM.from_pretrained(
             self.config["base_model_path"],
-            device_map="cuda",
+            device_map=self.device,
             torch_dtype=torch.float16,
             trust_remote_code=self.config.get("trust_remote_code", True)
         )
@@ -94,7 +94,7 @@ class ImageTextSimilarity:
             padding=self.config["padding"]
         )
         for key in inputs_text:
-            inputs_text[key] = inputs_text[key].to("cuda")
+            inputs_text[key] = inputs_text[key].to(self.device)
 
         # Get text embedding
         with torch.no_grad():
@@ -111,7 +111,7 @@ class ImageTextSimilarity:
                     images=input_image,
                     return_tensors="pt",
                     padding=self.config["padding"]
-                ).to("cuda")
+                ).to(self.device)
 
                 with torch.no_grad():
                     emb_image = self.model(**inputs_image, output_hidden_states=True, return_dict=True).hidden_states[-1][:, -1, :]

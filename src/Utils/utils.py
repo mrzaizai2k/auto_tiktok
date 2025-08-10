@@ -5,13 +5,10 @@ from functools import wraps
 import time
 import os
 import yaml
-import platform
-import subprocess
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-from typing import Optional
+import torch
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -162,3 +159,16 @@ class GoogleTranslator:
             translated_text += get_translation_chunk(chunk) + "\n"
         
         return translated_text.strip()
+    
+
+def take_device():
+    # Check for GPU availability
+    gpu_available = torch.cuda.is_available()
+
+    # Set the device based on availability
+    device = torch.device("cuda" if gpu_available else "cpu")
+
+    # Print the selected device
+    print(f"Selected device: {device}")
+
+    return device

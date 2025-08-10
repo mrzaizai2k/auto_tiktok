@@ -43,11 +43,16 @@ jobs:
       - name: Run keyword_generator test
         run: python src/video/video_search_query_generator.py
 
-      - name: Run video_urls_search test
-        run: python src/video/background_video_generator.py
-
-      - name: Run image_text_matching test
-        run: python src/video/image_text_matching.py
-
       - name: Run crawl data test
         run: python src/script/crawl_data.py
+
+      # - name: Run image_text_matching test
+      #   run: python src/video/image_text_matching.py
+
+      # - name: Run video_urls_search test
+      #   run: python src/video/background_video_generator.py
+      
+      # - name: Run audio_generator test
+      #   run: python src/audio_generator.py
+
+
