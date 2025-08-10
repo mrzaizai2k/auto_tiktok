@@ -88,3 +88,9 @@ description_generator:
   model_name: gpt-4o-mini
   description_prompt_path: config/video_description_prompt.txt
   output_description_path: output/description.txt
+
+image_text_matching:
+  base_model_path: "DeepGlint-AI/UniME-Phi3.5-V-4.2B"
+  padding_side: "left"
+  padding: true
+  trust_remote_code: true

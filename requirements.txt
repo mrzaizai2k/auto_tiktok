@@ -55,3 +55,5 @@ unstructured
 newspaper3k
 f5-tts
 vinorm
+timm
+transformers==4.47.0

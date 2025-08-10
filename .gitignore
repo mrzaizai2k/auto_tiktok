@@ -7,4 +7,7 @@ __pycache__/
 *.mp3
 output/
 *.ttf
+data/
 notebook/
+*.png
+*.jpeg

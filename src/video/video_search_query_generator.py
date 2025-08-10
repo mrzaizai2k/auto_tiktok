@@ -149,14 +149,14 @@ class VideoKeywordGenerator:
             if next_idx != current_idx or i == len(captions)-1:
                 end_time = captions[i][0][1] if i == len(captions)-1 else captions[i-1][0][1]
                 if current_idx != "black" and 1 <= current_idx <= n:
-                    result.append((current_start, end_time, current_keywords))
+                    result.append((current_start, end_time, current_keywords, formatted[current_idx-1][0]))
                 current_start = captions[i][0][0]
                 current_keywords = next_keywords
                 current_idx = next_idx
 
         # Handle single caption case
         if len(captions) == 1 and current_idx != "black" and 1 <= current_idx <= n:
-            result.append((current_start, captions[0][0][1], current_keywords))
+            result.append((current_start, captions[0][0][1], current_keywords, formatted[current_idx-1][0]))
 
         return result
 
@@ -208,6 +208,6 @@ if __name__ == "__main__":
     results = generator.get_video_search_queries(test_script, captions)
     
     print("Generated timestamped keywords:")
-    for start, end, keywords in results:
-        print(f"[{start:.2f}s - {end:.2f}s]: {keywords}")
+    for start, end, keywords, sentence in results:
+        print(f"[{start:.2f}s - {end:.2f}s]: {keywords} - Sentence: {sentence}")
             
