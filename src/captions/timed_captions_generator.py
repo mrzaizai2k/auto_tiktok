@@ -341,12 +341,12 @@ if __name__ == "__main__":
 
     test_config = read_config(path='config/test_config.yaml')
 
-    # test_audio_path = test_config['test_audio_path']
-    # test_script = test_config['test_script']
+    test_audio_path = test_config['test_audio_path']
+    test_script = test_config['test_script']
 
-    test_audio_path = 'output/audio_tts.wav'
-    with open('output/script.txt', 'r', encoding='utf-8') as f:
-        test_script = f.read().strip()
+    # test_audio_path = 'output/audio_tts.wav'
+    # with open('output/script.txt', 'r', encoding='utf-8') as f:
+    #     test_script = f.read().strip()
 
     captions = generator.generate_timed_captions(test_audio_path, test_script)
     print(f"Captions:")

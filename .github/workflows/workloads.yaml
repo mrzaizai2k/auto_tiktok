@@ -45,5 +45,8 @@ jobs:
       - name: Run video_urls_search test
         run: python src/video/background_video_generator.py
 
+      - name: Run image_text_matching test
+        run: python src/video/image_text_matching.py
+
       - name: Run crawl data test
         run: python src/script/crawl_data.py

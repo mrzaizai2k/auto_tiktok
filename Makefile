@@ -16,3 +16,4 @@ unit_test:
 	python src/video/background_video_generator.py
 	python src/render/render_engine.py
 	python src/script/crawl_data.py
+	python src/video/image_text_matching.py

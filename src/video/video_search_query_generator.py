@@ -181,12 +181,12 @@ def create_example_captions():
     test_config = read_config(path='config/test_config.yaml')
     from src.captions.timed_captions_generator import CaptionGenerator
 
-    # test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
-    # test_script = test_config['test_script']  
+    test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
+    test_script = test_config['test_script']  
 
-    test_audio_path = 'output/audio_tts.wav'  # Example path
-    with open("output/script.txt", 'r', encoding='utf-8') as f:
-        test_script = f.read().strip()
+    # test_audio_path = 'output/audio_tts.wav'  # Example path
+    # with open("output/script.txt", 'r', encoding='utf-8') as f:
+    #     test_script = f.read().strip()
 
     config = read_config(path='config/config.yaml')
     generator = CaptionGenerator(config)
