@@ -103,12 +103,12 @@ Output will be saved to `output/rendered_video.mp4` based on `config/config.yaml
 ```mermaid
 flowchart TD
     A[Add Topic]:::process --> B[Crawl Data from Goodreads, Spiderum, VnExpress]:::external
-    B --> C[Generate Script and Description\nscript_generator.py]:::internal
-    C --> D[Generate Voice\nf5-tts or edge-tts\naudio_generator.py]:::internal
-    D --> E[Create Captions\ntimed_captions_generator.py]:::internal
-    E --> F[Find Keywords\nvideo_search_query_generator.py]:::internal
+    B --> C[Generate Script and Description]:::internal
+    C --> D[Generate Voice using f5-tts or edge-tts]:::internal
+    D --> E[Create Captions]:::internal
+    E --> F[Find Keywords]:::internal
     F --> G[Download Videos from Pexels and Pixabay]:::external
-    G --> H[Match Best Video\nUniME-Phi3.5-V-4.2B]:::external
+    G --> H[Match Best Video using UniME-Phi3.5-V-4.2B]:::external
     H --> I[Render Final Video with Moviepy]:::internal
 
     classDef process fill:#fff3b0,stroke:#d4a017,stroke-width:2px,color:#000
