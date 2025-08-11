@@ -57,10 +57,6 @@ if __name__ == "__main__":
     else:
         print("No background video")
 
-    # background_video_urls = merge_empty_intervals(background_video_urls)
-    # print("Second background_video_urls\n",background_video_urls)
-
-
     if background_video_urls is not None:
         composer = VideoComposer(config)
         video = composer.compose_video(

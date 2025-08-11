@@ -69,7 +69,7 @@ class PexelsVideoSearch(VideoSearchBase):
         self.pexels_api_key: str = os.getenv('PEXELS_API_KEY')
         if not self.pexels_api_key:
             raise ValueError("PEXELS_API_KEY not found in environment variables")
-        self.api_url = self.config['url']
+        self.api_url = "https://api.pexels.com/videos/search"
 
     def search_videos(self, query: str) -> Dict:
         headers = {
