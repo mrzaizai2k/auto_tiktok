@@ -103,14 +103,33 @@ Output will be saved to `output/rendered_video.mp4` based on `config/config.yaml
 ```mermaid
 flowchart TD
     A[Add Topic] --> B[Crawl Data from Goodreads, Spiderum, VnExpress]
-    B --> C[Generate Script & Description<br>(script_generator.py)]
-    C --> D[Generate Voice<br>(f5-tts / edge-tts)]
-    D --> E[Create Captions<br>(timed_captions_generator.py)]
-    E --> F[Find Keywords for Background Video<br>(video_search_query_generator.py)]
-    F --> G[Download Videos from Pexels/Pixabay]
-    G --> H[Match Best Video with Script<br>(UniME-Phi3.5-V-4.2B)]
+    B --> C[Generate Script and Description - script_generator.py]
+    C --> D[Generate Voice - f5-tts or edge-tts - audio_generator.py]
+    D --> E[Create Captions - timed_captions_generator.py]
+    E --> F[Find Keywords - video_search_query_generator.py]
+    F --> G[Download Videos from Pexels and Pixabay]
+    G --> H[Match Best Video - UniME-Phi3.5-V-4.2B]
     H --> I[Render Final Video with Moviepy]
 ```
+
+
+```mermaid
+flowchart TD
+    A[Add Topic]:::process --> B[Crawl Data from Goodreads, Spiderum, VnExpress]:::external
+    B --> C[Generate Script and Description\nscript_generator.py]:::internal
+    C --> D[Generate Voice\nf5-tts or edge-tts\naudio_generator.py]:::internal
+    D --> E[Create Captions\ntimed_captions_generator.py]:::internal
+    E --> F[Find Keywords\nvideo_search_query_generator.py]:::internal
+    F --> G[Download Videos from Pexels and Pixabay]:::external
+    G --> H[Match Best Video\nUniME-Phi3.5-V-4.2B]:::external
+    H --> I[Render Final Video with Moviepy]:::internal
+
+    classDef process fill:#fff3b0,stroke:#d4a017,stroke-width:2px,color:#000
+    classDef internal fill:#cce5ff,stroke:#004085,stroke-width:2px,color:#000
+    classDef external fill:#d4edda,stroke:#155724,stroke-width:2px,color:#000
+```
+
+
 
 ## Troubleshooting
 
