@@ -6,17 +6,47 @@ import requests
 import json
 import os
 import uuid
+from datetime import datetime, timedelta
+
 from fake_useragent import FakeUserAgentError, UserAgent
 from requests_auth_aws_sigv4 import AWSSigV4
 from src.tiktok_uploader.bot_utils import (generate_random_string, assert_success, 
                                            print_error, subprocess_jsvmp, convert_tags,
                                            crc32)
 from dotenv import load_dotenv
-from src.Utils.utils import read_config, load_cookies_from_file, read_txt_file
+from src.Utils.utils import load_cookies_from_file, read_txt_file
 
 load_dotenv()
 
-
+def validate_schedule_time(schedule_time_str):
+    try:
+        # Parse string to datetime
+        dt = datetime.strptime(schedule_time_str, "%Y-%d-%m %H:%M:%S")
+        # Get current time
+        now = datetime.now()
+        
+        # If dt is in the past, adjust to today or next day
+        if dt < now:
+            # Keep same hour, minute, second
+            dt = now.replace(hour=dt.hour, minute=dt.minute, second=dt.second, microsecond=0)
+            # If time is earlier today, move to next day
+            if dt < now:
+                dt += timedelta(days=1)
+        
+        # Calculate seconds difference
+        seconds = int((dt - now).total_seconds())
+        
+        # Validate and adjust seconds
+        if seconds < 900:
+            print("[-] Cannot schedule video in less than 15 minutes")
+            return 900
+        elif seconds > 864000:
+            print("[-] Cannot schedule video in more than 10 days")
+            return 864000
+        return seconds
+    except ValueError:
+        print("[-] Invalid date format. Use YYYY-dd-mm HH:MM:SS")
+        return False
 
 def upload_video(config):
     """Upload video to TikTok"""
@@ -24,13 +54,13 @@ def upload_video(config):
     uploader_config = config['tiktok_uploader']
     video_file = uploader_config.get('video_file')
     description_path = uploader_config.get('description_path', "output/description.txt")
-    schedule_time = uploader_config.get('schedule_time', 120)
+    schedule_time = uploader_config.get('schedule_time')
     allow_comment = uploader_config.get('allow_comment', 1)
     allow_duet = uploader_config.get('allow_duet', 1)
     allow_stitch = uploader_config.get('allow_stitch', 1)
     visibility_type = uploader_config.get('visibility_type', 0)
     proxy = uploader_config.get('proxy')
-    cookies_file = uploader_config.get('cookies_file')
+    cookies_file = uploader_config.get('cookies_file', "cookies/tiktok.json")
     user_agent_default = uploader_config.get('user_agent_default')
     
     try:
@@ -56,15 +86,11 @@ def upload_video(config):
     
     print("Uploading video...")
     
-    description = read_txt_file(path = description_path)
+    schedule_time = validate_schedule_time(schedule_time_str=schedule_time) # has to be in seconds
+
+    description = read_txt_file(path = description_path)[:2200] #The description has to be less than 2200 characters
 
     # Parameter validation
-    if schedule_time and (schedule_time > 864000 or schedule_time < 900):
-        print("[-] Cannot schedule video in more than 10 days or less than 20 minutes")
-        return False
-    if len(description) > 2200:
-        print("[-] The title has to be less than 2200 characters")
-        return False
     if schedule_time != 0 and visibility_type == 1:
         print("[-] Private videos cannot be uploaded with schedule")
         return False
@@ -292,6 +318,7 @@ def upload_to_tiktok(video_file, session):
     return video_id, session_key, upload_id, crcs, upload_host, store_uri, video_auth, aws_auth
 
 if __name__ == "__main__":
+    from src.Utils.utils import read_config
     # Load config
     config = read_config(path='config/config.yaml')
     

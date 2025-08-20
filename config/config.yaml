@@ -97,11 +97,11 @@ image_text_matching:
 tiktok_uploader:
   video_file: *out_video_path
   description_path: *output_description_path
-  schedule_time: 30000
+  schedule_time: "2025-19-08 20:00:00" # YYYY-dd-mm HH:MM:SS
   allow_comment: 1
   allow_duet: 1
   allow_stitch: 1
-  visibility_type: 0
+  visibility_type: 0 # 1 is private video - can not set schedule_time for this type
   proxy: null
   cookies_file: cookies/tiktok.json
   user_agent_default: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36
