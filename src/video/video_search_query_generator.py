@@ -1,14 +1,13 @@
 import sys
 sys.path.append("")
 
-from typing import List, Dict, Any, Tuple
 import os
 import re
+from typing import List, Dict, Any, Tuple
+
 from openai import OpenAI
 from dotenv import load_dotenv
-from math import inf
-from difflib import SequenceMatcher
-from src.Utils.utils import read_config
+from src.Utils.utils import read_config, read_txt_file
 
 load_dotenv()
 
@@ -31,12 +30,9 @@ class VideoKeywordGenerator:
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
         self.client = OpenAI(api_key=self.api_key)
+
+        self.prompt = read_txt_file(path = self.video_search_keyword_prompt_path)
         
-        try:
-            with open(self.video_search_keyword_prompt_path, 'r', encoding='utf-8') as file:
-                self.prompt = file.read()
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Prompt file not found at {self.video_search_keyword_prompt_path}")
 
     # ----------------- OpenAI Call -------------------
     def generate_raw_text_keywords(self, script: str) -> str:
@@ -181,12 +177,12 @@ def create_example_captions():
     test_config = read_config(path='config/test_config.yaml')
     from src.captions.timed_captions_generator import CaptionGenerator
 
-    test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
-    test_script = test_config['test_script']  
+    # test_audio_path = test_config['test_audio_path']  # Replace with actual Vietnamese audio file path
+    # test_script = test_config['test_script']  
 
-    # test_audio_path = 'output/audio_tts.wav'  # Example path
-    # with open("output/script.txt", 'r', encoding='utf-8') as f:
-    #     test_script = f.read().strip()
+    test_audio_path = 'output/audio_tts.wav'  # Example path
+    with open("output/script.txt", 'r', encoding='utf-8') as f:
+        test_script = f.read().strip()
 
     config = read_config(path='config/config.yaml')
     generator = CaptionGenerator(config)

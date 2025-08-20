@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.script.crawl_data import SpiderPostClient, NewsScraper, GoodreadsScraper
+from src.Utils.utils import read_txt_file
 
 class ScriptGenerator:
     """Generates TikTok video scripts inspired by books using OpenAI's API."""
@@ -38,14 +39,6 @@ class ScriptGenerator:
             raise ValueError("OPENAI_API_KEY not set")
         self.client = OpenAI(api_key=self.api_key)
         self.messages = []
-
-    def read_prompt(self, path: str) -> str:
-        """Read prompt file."""
-        try:
-            with open(path, 'r', encoding='utf-8') as file:
-                return file.read()
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Prompt file not found: {path}")
     
     
     def save_script(self, script: str) -> None:
@@ -68,7 +61,7 @@ class ScriptGenerator:
                 "book_name": "book title"
             }
         """
-        prompt_template = self.read_prompt(self.prompt_paths['keyword'])
+        prompt_template = read_txt_file(path = self.prompt_paths['keyword'])
         full_prompt = f"{prompt_template.strip()} {topic.strip()}"
 
         result = self.generate_text(
@@ -235,13 +228,13 @@ class ScriptGenerator:
         content = self.search_web(topic_info)
         reference = self.generate_reference(content)
         
-        detailed_prompt = self.read_prompt(self.prompt_paths['detailed']) + " " + reference
+        detailed_prompt = self.read_txt_file(self.prompt_paths['detailed']) + " " + reference
         detailed_script = self.generate_text(
             prompt=detailed_prompt, 
             config_key='detailed_model'
         )
         
-        final_prompt = self.read_prompt(self.prompt_paths['final']) + " " + detailed_script 
+        final_prompt = self.read_txt_file(self.prompt_paths['final']) + " " + detailed_script 
         sub_final_script = self.generate_text(
             prompt=final_prompt,
             config_key='final_model',

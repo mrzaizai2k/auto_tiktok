@@ -4,6 +4,8 @@ sys.path.append("")
 import os
 from typing import Dict, Any
 from openai import OpenAI
+from src.Utils.utils import read_txt_file
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,11 +31,7 @@ class DescriptionGenerator:
             raise ValueError("OPENAI_API_KEY environment variable not set")
         self.client = OpenAI(api_key=self.api_key)
         
-        try:
-            with open(self.description_prompt_path, 'r', encoding='utf-8') as file:
-                self.prompt = file.read()
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Prompt file not found at {self.description_prompt_path}")
+        self.prompt = read_txt_file(path = self.description_prompt_path)
 
     def generate_description_from_llm(self, script: str) -> str:
         """Generate a short description from the given script using OpenAI API."""

@@ -5,6 +5,7 @@ from functools import wraps
 import time
 import os
 import yaml
+import json
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -172,3 +173,22 @@ def take_device():
     print(f"Selected device: {device}")
 
     return device
+
+
+def load_cookies_from_file(file_path):
+    """Load cookies from JSON file"""
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            return data.get('cookies', [])
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Error loading cookies from {file_path}: {e}")
+        return []
+    
+def read_txt_file(path: str) -> str:
+    """Read prompt file."""
+    try:
+        with open(path, 'r', encoding='utf-8') as file:
+            return file.read().strip()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Prompt file not found: {path}")

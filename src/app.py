@@ -9,7 +9,7 @@ from src.captions.timed_captions_generator import CaptionGenerator
 from src.video.background_video_generator import VideoSearch
 from src.render.render_engine import VideoComposer
 from src.video.video_search_query_generator import VideoKeywordGenerator
-from src.Utils.utils import read_config, check_path
+from src.Utils.utils import read_config, check_path, read_txt_file
 
 if __name__ == "__main__":
 
@@ -25,8 +25,7 @@ if __name__ == "__main__":
     # script_generator = ScriptGenerator(config)
     # script = script_generator.generate_script(topic)
 
-    with open('output/script.txt', 'r', encoding='utf-8') as file:
-        script = file.read().strip()
+    script = read_txt_file(path = 'output/script.txt')
 
     description_generator = DescriptionGenerator(config)
     description = description_generator.generate_description(script)
