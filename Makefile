@@ -2,6 +2,10 @@ install:
 # 	conda create -n text2vid python=3.10 -y
 # 	conda activate text2vid
 	pip install -r requirements.txt
+	cd /src/tiktok_uploader/tiktok-signature/
+	npm install
+	npx playwright install chromium
+	cd ../../../
 
 run:
 	python src/app.py

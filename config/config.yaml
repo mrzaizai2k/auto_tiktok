@@ -39,36 +39,36 @@ caption_generator:
 
 keyword_generator:
   model_name: gpt-4o-mini
-  temperature: 0.3
+  temperature: 0.6
   max_tokens: 4096
-  top_p: 0.3
+  top_p: 0.6
   presence_penalty: 0.1
 
   video_search_keyword_prompt_path: config/video_search_keyword_prompt.txt
 
 video_search:
   per_page: 15
-  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
   video_width: 1080
   video_height: &video_height 1920
   ratio_threshold: 0.1 # Aspect ratio threshold for filtering videos
 
 video_composer:
   output_video_path: *out_video_path
-  font_path: "font/Neue-Einstellung-Bold.ttf"
+  font_path: font/Neue-Einstellung-Bold.ttf
   font_size: 120
-  text_color: "white"
+  text_color: white
   stroke_width: 4
-  stroke_color: "black"
-  text_position: ["center", 1200]
+  stroke_color: black
+  text_position: [center, 1200]
   video_height: *video_height 
-  video_codec: "libx264"
-  audio_codec: "aac"
+  video_codec: libx264
+  audio_codec: aac
   fps: 25
-  preset: "veryfast"
+  preset: veryfast
 
 audio_generator:
-  voice: "vi-VN-NamMinhNeural" # vi-VN-HoaiMyNeural # vi-VN-NamMinhNeural
+  voice: vi-VN-NamMinhNeural # vi-VN-HoaiMyNeural # vi-VN-NamMinhNeural
   output_audio_path: *out_audio_path
 
   model_params:
@@ -78,18 +78,30 @@ audio_generator:
     ff_mult: 2
     text_dim: 512
     conv_layers: 4
-  checkpoint_path: "hf://hynt/F5-TTS-Vietnamese-ViVoice/model_last.pt"
-  vocab_file: "hf://hynt/F5-TTS-Vietnamese-ViVoice/config.json"
+  checkpoint_path: hf://hynt/F5-TTS-Vietnamese-ViVoice/model_last.pt
+  vocab_file: hf://hynt/F5-TTS-Vietnamese-ViVoice/config.json
   speed: 1.0
   ref_audio_path: config/ref_sound.wav # Path to reference audio file for TTS
 
 description_generator:
   model_name: gpt-4o-mini
   description_prompt_path: config/video_description_prompt.txt
-  output_description_path: output/description.txt
+  output_description_path: &output_description_path output/description.txt
 
 image_text_matching:
-  base_model_path: "DeepGlint-AI/UniME-Phi3.5-V-4.2B"
-  padding_side: "left"
+  base_model_path: DeepGlint-AI/UniME-Phi3.5-V-4.2B
+  padding_side: left
   padding: true
   trust_remote_code: true
+
+tiktok_uploader:
+  video_file: *out_video_path
+  description_path: *output_description_path
+  schedule_time: 30000
+  allow_comment: 1
+  allow_duet: 1
+  allow_stitch: 1
+  visibility_type: 0
+  proxy: null
+  cookies_file: cookies/tiktok.json
+  user_agent_default: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36

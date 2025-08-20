@@ -58,3 +58,5 @@ f5-tts==1.1.7
 vinorm
 timm
 transformers==4.47.0
+requests-auth-aws-sigv4
+fake-useragent

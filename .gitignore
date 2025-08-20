@@ -11,3 +11,6 @@ data/
 notebook/
 *.png
 *.jpeg
+cookies/
+cookies.txt
+src/tiktok_uploader/tiktok-signature/node_modules/
