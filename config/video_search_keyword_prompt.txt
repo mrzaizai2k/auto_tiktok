@@ -16,6 +16,7 @@ text: <text 2>
 keywords: <keyword 1>, <keyword 2>, <keyword 3>
 
 Guidelines:
+- Must have all the text from the script, don't miss or skip any text (this is really important)
 - Use only English in your keywords.  
 - Each keyword must be visually descriptive.  
 - Avoid abstract terms like "emotional moment" (BAD).  

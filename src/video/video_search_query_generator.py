@@ -6,6 +6,7 @@ import re
 from typing import List, Dict, Any, Tuple
 
 from openai import OpenAI
+import concurrent.futures
 from dotenv import load_dotenv
 from src.Utils.utils import read_config, read_txt_file
 
@@ -25,16 +26,37 @@ class VideoKeywordGenerator:
             'video_search_keyword_prompt_path',
             'config/video_search_keyword_prompt.txt'
         )
+        self.split_length = self.config.get('split_length', 500)
         
         self.api_key = os.getenv('OPENAI_API_KEY')
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
         self.client = OpenAI(api_key=self.api_key)
 
-        self.prompt = read_txt_file(path = self.video_search_keyword_prompt_path)
-        
+        self.prompt = read_txt_file(path=self.video_search_keyword_prompt_path)
 
-    # ----------------- OpenAI Call -------------------
+    def _split_script(self, script: str) -> List[str]:
+        """Split script into sentences with total words less than split_length."""
+        sentences = re.split(r'(?<=[.!?])\s+', script.strip())
+        batches = []
+        current_batch = []
+        current_word_count = 0
+
+        for sentence in sentences:
+            word_count = len(sentence.split())
+            if current_word_count + word_count > self.split_length and current_batch:
+                batches.append(' '.join(current_batch))
+                current_batch = [sentence]
+                current_word_count = word_count
+            else:
+                current_batch.append(sentence)
+                current_word_count += word_count
+
+        if current_batch:
+            batches.append(' '.join(current_batch))
+        
+        return batches
+
     def generate_raw_text_keywords(self, script: str) -> str:
         """Call OpenAI API to generate keyword segments for the script."""
         try:
@@ -53,17 +75,8 @@ class VideoKeywordGenerator:
         except Exception as e:
             raise ValueError(f"OpenAI API call failed: {str(e)}")
 
-    # ----------------- Formatting -------------------
     def format_llm_result(self, openai_text: str) -> List[Tuple[str, List[str]]]:
-        """
-        Format LLM text result into a structured list of (text, [keywords]) tuples.
-        
-        Example output:
-        [
-            ("Sentence 1", ["keyword1", "keyword2", "keyword3"]),
-            ("Sentence 2", ["keyword4", "keyword5", "keyword6"])
-        ]
-        """
+        """Format LLM text result into a structured list of (text, [keywords]) tuples."""
         blocks = re.split(r'---+', openai_text)
         results = []
 
@@ -85,9 +98,9 @@ class VideoKeywordGenerator:
 
     def _normalize_text(self, text: str) -> str:
         """Normalize text for better matching by removing extra spaces, punctuation, and special characters."""
-        text = re.sub(r'[^\w\s]', ' ', text)  # Remove punctuation and special characters
-        text = re.sub(r'[\n\r\t]+', ' ', text)  # Remove newlines, carriage returns, tabs
-        text = re.sub(r'\s+', ' ', text)  # Normalize multiple spaces to single space
+        text = re.sub(r'[^\w\s]', ' ', text)
+        text = re.sub(r'[\n\r\t]+', ' ', text)
+        text = re.sub(r'\s+', ' ', text)
         return text.strip().lower()
 
     def time_mapping(self, formatted: List[Tuple[str, List[str]]], captions: List[Tuple[Tuple[float, float], str]]) -> List[Tuple[float, float, List[str]]]:
@@ -95,25 +108,22 @@ class VideoKeywordGenerator:
         if not formatted or not captions:
             return []
 
-        # Part 1: Initial sentence index assignment
         sentence_indices = []
-        j = 0  # Tracks current position in formatted list
+        j = 0
         for caption_idx, ((start, end), caption_text) in enumerate(captions):
             caption_text = self._normalize_text(caption_text)
             found = False
-            # Search only in current (j) and next (j+1) sentence
             for i in range(j, min(j + 2, len(formatted))):
                 sentence = self._normalize_text(formatted[i][0])
                 if caption_text in sentence:
-                    sentence_indices.append(i + 1)  # 1-based indexing
-                    j = i  # Update j to current matched position
+                    sentence_indices.append(i + 1)
+                    j = i
                     found = True
                     break
             if not found:
                 sentence_indices.append("black")
-                j = min(j + 1, len(formatted) - 1)  # Move j forward if no match
+                j = min(j + 1, len(formatted) - 1)
 
-        # Part 2: Process indices to fill gaps
         if not sentence_indices:
             return []
 
@@ -133,7 +143,6 @@ class VideoKeywordGenerator:
                         break
                 processed_indices[i] = last_valid if next_valid is None else last_valid
 
-        # Merge consecutive identical keywords
         result = []
         current_start = captions[0][0][0]
         current_keywords = formatted[processed_indices[0]-1][1] if processed_indices[0] != "black" else []
@@ -150,7 +159,6 @@ class VideoKeywordGenerator:
                 current_keywords = next_keywords
                 current_idx = next_idx
 
-        # Handle single caption case
         if len(captions) == 1 and current_idx != "black" and 1 <= current_idx <= n:
             result.append((current_start, captions[0][0][1], current_keywords, formatted[current_idx-1][0]))
 
@@ -165,14 +173,30 @@ class VideoKeywordGenerator:
         if not script or not isinstance(script, str):
             raise ValueError("Script must be a non-empty string")
 
-        raw_output = self.generate_raw_text_keywords(script)
-        formatted = self.format_llm_result(raw_output)
-        mapping = self.time_mapping(formatted, captions)
+        # Split script into batches
+        script_batches = self._split_script(script)
+        formatted_results = []
 
+        # Process batches concurrently while preserving order
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.generate_raw_text_keywords, batch) for batch in script_batches]
+            for future in futures:
+                try:
+                    raw_output = future.result()
+                    formatted = self.format_llm_result(raw_output)
+                    formatted_results.append(formatted)
+                except Exception as e:
+                    raise ValueError(f"Processing batch failed: {str(e)}")
 
+        # Concatenate formatted results
+        concatenated_formatted = []
+        for formatted in formatted_results:
+            concatenated_formatted.extend(formatted)
+
+        # Map to timestamps
+        mapping = self.time_mapping(concatenated_formatted, captions)
         return mapping
-
-
+    
 def create_example_captions():
     from src.captions.timed_captions_generator import CaptionGenerator
 

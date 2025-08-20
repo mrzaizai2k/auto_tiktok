@@ -38,9 +38,10 @@ caption_generator:
   srt_file_path: output/captions.srt # Can be None
 
 keyword_generator:
-  model_name: gpt-4o-mini
+  split_length: 500
+  model_name: gpt-4.1-mini
   temperature: 0.6
-  max_tokens: 4096
+  max_tokens: 8192
   top_p: 0.6
   presence_penalty: 0.1
 
