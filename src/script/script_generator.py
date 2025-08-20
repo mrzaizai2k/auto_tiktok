@@ -228,13 +228,13 @@ class ScriptGenerator:
         content = self.search_web(topic_info)
         reference = self.generate_reference(content)
         
-        detailed_prompt = self.read_txt_file(self.prompt_paths['detailed']) + " " + reference
+        detailed_prompt = read_txt_file(self.prompt_paths['detailed']) + " " + reference
         detailed_script = self.generate_text(
             prompt=detailed_prompt, 
             config_key='detailed_model'
         )
         
-        final_prompt = self.read_txt_file(self.prompt_paths['final']) + " " + detailed_script 
+        final_prompt = read_txt_file(self.prompt_paths['final']) + " " + detailed_script 
         sub_final_script = self.generate_text(
             prompt=final_prompt,
             config_key='final_model',
