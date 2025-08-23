@@ -10,35 +10,35 @@ from langchain_community.document_loaders import NewsURLLoader
 from unstructured.cleaners.core import clean_extra_whitespace
 from src.Utils.utils import GoogleTranslator, timeit
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 class SpiderPostClient:
     BASE_SEARCH_URL = "https://spiderum.com/api/v1/search"
     BASE_POST_URL = "https://spiderum.com/bai-dang/"
+    BASE_TOP_URL = "https://spiderum.com/api/v1/feed/getAllPosts?type=top&page="
 
     def __init__(self, user_agent: str = "Mozilla/5.0") -> None:
         self.headers = {"User-Agent": user_agent}
 
     def _create_search_url(self, search_text: str, page: int = 1, type_: str = "post") -> str:
-        encoded_text = urllib.parse.quote(search_text)
-        return f"{self.BASE_SEARCH_URL}?q={encoded_text}&page={page}&type={type_}"
+        """Create URL for searching posts by text."""
+        return f"{self.BASE_SEARCH_URL}?q={urllib.parse.quote(search_text)}&page={page}&type={type_}"
+
+    def _create_top_url(self, page: int = 1) -> str:
+        """Create URL for fetching top posts."""
+        return f"{self.BASE_TOP_URL}{page}"
 
     def _extract_with_bs(self, url: str) -> str:
-        """Primary extraction using BeautifulSoup."""
+        """Extract text content from a URL using BeautifulSoup."""
         try:
             resp = requests.get(url, headers=self.headers, timeout=10)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
-
-            blocks = []
-            for div in soup.select("div.ce-paragraph, div[style*='text-align']"):
-                text = div.get_text(strip=True)
-                if text:
-                    blocks.append(text)
-
+            blocks = [div.get_text(strip=True) for div in soup.select("div.ce-paragraph, div[style*='text-align']") if div.get_text(strip=True)]
             return "\n\n".join(blocks).strip()
         except Exception:
             return ""
-
+        
     def _extract_with_newsurl(self, url: str) -> str:
         """Fallback extraction using NewsURLLoader."""
         if not NewsURLLoader:
@@ -51,65 +51,73 @@ class SpiderPostClient:
             return ""
 
     def fetch_post_content(self, slug: str) -> str:
-        """Try extracting with BeautifulSoup, fall back to NewsURLLoader if empty."""
+        """Fetch and extract content for a post by slug."""
         url = f"{self.BASE_POST_URL}{slug}"
         content = self._extract_with_bs(url)
-        if not content:
-            content = self._extract_with_newsurl(url)
-        return content
-    
-    @timeit
-    def search_posts(self, search_text: str, page: int = 1) -> List[Dict]:
-        """Search and return posts, fetching content with ThreadPoolExecutor."""
-        url = self._create_search_url(search_text, page)
-        response = requests.get(url, headers=self.headers, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        return content if content else self._extract_with_newsurl(url)
 
-        results = []
-        slugs = []
-        for item in data.get("items", []):
+    def process_results(self, items: List[Dict], base_url: str) -> List[Dict]:
+        """Process API response items into standardized format and fetch content."""
+        results, slugs = [], []
+        for item in items:
             slug = item.get("slug")
-            tags = [tag.get("name") for tag in item.get("tags", [])]
             results.append({
                 "title": item.get("title"),
-                "link": f"{self.BASE_POST_URL}{slug}",
+                "link": f"{base_url}{slug}",
                 "slug": slug,
-                "category_slug": item.get("cat_id", {}).get("slug"),
+                "category_slug": item.get("cat_id", {}).get("slug", ""),
                 "description": item.get("description"),
                 "created_at": item.get("created_at"),
-                "tags": tags,
-                "comment_count": item.get("comment_count") or 0,
-                "views_count": item.get("views_count") or 0,
-                "point": item.get("point") or 0,
+                "tags": [tag.get("name") for tag in item.get("tags", [])],
+                "comment_count": item.get("comment_count", 0),
+                "views_count": item.get("views_count", 0),
+                "point": item.get("point", 0),
                 "content": ""
             })
             if slug:
                 slugs.append(slug)
 
-        # Fetch content in parallel using ThreadPoolExecutor
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor() as executor:
             contents = list(executor.map(self.fetch_post_content, slugs))
-
-        # Assign content to results
         for result, content in zip(results, contents):
             result["content"] = content if isinstance(content, str) else ""
-
         return results
-    
-    def sort_posts(self, posts: List[Dict], key: Literal["comment_count", "views_count", "point"] = "views_count", 
-                   reverse: bool = True) -> List[Dict]:
-        """Sort posts by comment_count, views_count, or point."""
 
-        def _to_number(v: Optional[int], default: float = 0) -> float:
-            try:
-                return float(v) if v is not None else default
-            except (TypeError, ValueError):
-                return default
+    @timeit
+    def search_posts(self, search_text: str = "", page: int = 1) -> List[Dict]:
+        """Search posts by topic or fetch top posts if no search text provided."""
+        try:
+            return self.fetch_by_topic(search_text, page) if search_text else self.fetch_top_posts(page)
+        except Exception as e:
+            print(f"Search failed: {e}")
+            return []
 
-        return sorted(posts, key=lambda x: _to_number(x.get(key)), reverse=reverse)
+    @timeit
+    def fetch_by_topic(self, search_text: str, page: int = 1) -> List[Dict]:
+        """Fetch posts by search topic."""
+        try:
+            url = self._create_search_url(search_text, page)
+            response = requests.get(url, headers=self.headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            return self.process_results(data.get("items", []), self.BASE_POST_URL)
+        except Exception as e:
+            print(f"Fetch by topic failed: {e}")
+            return []
 
-
+    @timeit
+    def fetch_top_posts(self, page: int = 1) -> List[Dict]:
+        """Fetch top posts from the API."""
+        try:
+            url = self._create_top_url(page)
+            response = requests.get(url, headers=self.headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            return self.process_results(data["posts"]["items"], self.BASE_POST_URL)
+        except Exception as e:
+            print(f"Fetch top posts failed: {e}")
+            return []
+            
 
 class NewsScraper:
     '''
@@ -220,28 +228,32 @@ if __name__ == "__main__":
     book_name = "Đắc Nhân Tâm"
         
     client = SpiderPostClient()
-    posts = client.search_posts(book_name, page=1)
-    print("posts:", posts[0])
-    content = client.fetch_post_content("THE-NAO-LA-DAC-NHAN-TAM-fbc")
-    print("content", content[:30], "...\n")
+    posts = client.search_posts(search_text="sách Đắc Nhân Tâm", page=1)
 
-    scraper = NewsScraper()
-    results = scraper.search_query_news(query=book_name, date_format="all")
-    print('results',results[0]['url'])
+    # posts = client.search_posts(book_name, page=1)
+    # print("posts:", posts[0])
+    # content = client.fetch_post_content("THE-NAO-LA-DAC-NHAN-TAM-fbc")
+    # print("content", content[:30], "...\n")
 
-    scraper = GoodreadsScraper()
+
+
+    # scraper = NewsScraper()
+    # results = scraper.search_query_news(query=book_name, date_format="all")
+    # print('results',results[0]['url'])
+
+    # scraper = GoodreadsScraper()
     
-    book_data = scraper.crawl_book(book_name)
-    if "error" not in book_data:
-        print(f"Book Details for {book_name}:")
-        print(f"Title: {book_data['title']}")
-        print(f"Author: {book_data['author']}")
-        print(f"Rating: {book_data['rating']}")
-        print(f"Description: {book_data['description'][:100]}...")
-        print("\nTop Reviews (translated to Vietnamese):")
-        for i, review in enumerate(book_data['top_reviews'], 1):
-            print(f"Review {i}: {review[:30]}...")
-    else:
-        print(book_data["error"])
+    # book_data = scraper.crawl_book(book_name)
+    # if "error" not in book_data:
+    #     print(f"Book Details for {book_name}:")
+    #     print(f"Title: {book_data['title']}")
+    #     print(f"Author: {book_data['author']}")
+    #     print(f"Rating: {book_data['rating']}")
+    #     print(f"Description: {book_data['description'][:100]}...")
+    #     print("\nTop Reviews (translated to Vietnamese):")
+    #     for i, review in enumerate(book_data['top_reviews'], 1):
+    #         print(f"Review {i}: {review[:30]}...")
+    # else:
+    #     print(book_data["error"])
 
     
