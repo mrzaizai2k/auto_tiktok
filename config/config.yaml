@@ -81,7 +81,7 @@ audio_generator:
     conv_layers: 4
   checkpoint_path: hf://hynt/F5-TTS-Vietnamese-ViVoice/model_last.pt
   vocab_file: hf://hynt/F5-TTS-Vietnamese-ViVoice/config.json
-  speed: 1.0
+  speed: 1.2
   ref_audio_path: config/ref_sound.wav # Path to reference audio file for TTS
 
 description_generator:

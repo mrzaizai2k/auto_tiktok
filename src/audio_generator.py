@@ -50,12 +50,27 @@ class AudioGenerator:
             str: Processed text.
         """
         text = f" {text} "
-        text = text.replace(" . . ", " . ")
         text = text.replace(" .. ", " . ")
         text = text.replace(" , , ", " , ")
         text = text.replace(" ,, ", " , ")
         text = text.replace('"', "")
+        text = text.replace(" . . ", " . ")
         return " ".join(text.split())
+    
+    def pre_process(self, text: str) -> str:
+        """Clean and preprocess input text.
+
+        Args:
+            text (str): Input text to process.
+
+        Returns:
+            str: Processed text.
+        """
+        text = f" {text} "
+        text = text.replace('...', ".")
+        text = text.replace('..', ".")
+        return  text.strip()
+
 
     def export_wav(self, wav: np.ndarray, file_wave: str) -> None:
         """Save audio waveform to a WAV file.
@@ -93,9 +108,10 @@ class AudioGenerator:
             raise ValueError("Text content must be less than 1000 words.")
 
         try:
+            preprocessed_text =  self.post_process(TTSnorm(self.pre_process(text))).lower()
             ref_audio, ref_text = preprocess_ref_audio_text(ref_audio_path, "")
             final_wave, final_sample_rate, spectrogram = infer_process(
-                ref_audio, ref_text.lower(), self.post_process(TTSnorm(text)).lower(), 
+                ref_audio, ref_text.lower(), preprocessed_text, 
                 self.model, self.vocoder, speed=self.config.get("speed", 1.0),
             )
             # Ensure final_wave is a 1D array for mono audio
@@ -127,9 +143,10 @@ if __name__ == "__main__":
     test_audio_path = config['test_audio_path']  # Replace with actual Vietnamese audio file path
     test_script = config['test_script']  
 
-    asyncio.run(generate_audio(text = test_script, config=config))
-    print(f"Audio saved to {test_audio_path}")
-
+    # asyncio.run(generate_audio(text = test_script, config=config))
+    # print(f"Audio saved to {test_audio_path}")
+    from src.Utils.utils import read_txt_file
+    test_script = read_txt_file(path = "output/script.txt")[:600]
 
     config = read_config(path="config/config.yaml")
     generator = AudioGenerator(config)

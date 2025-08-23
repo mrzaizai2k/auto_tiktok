@@ -9,7 +9,7 @@ Cython==3.0.10
 decorator==4.4.2
 distro==1.9.0
 dtw-python==1.5.1
-edge-tts==6.1.12
+edge-tts
 filelock==3.14.0
 frozenlist==1.4.1
 fsspec==2024.6.0
