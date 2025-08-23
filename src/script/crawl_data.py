@@ -228,32 +228,33 @@ if __name__ == "__main__":
     book_name = "Đắc Nhân Tâm"
         
     client = SpiderPostClient()
-    posts = client.search_posts(search_text="sách Đắc Nhân Tâm", page=1)
+    # Search hot posts
+    posts = client.search_posts(page=1)
+    # Search posts by topic
+    posts = client.search_posts(book_name, page=1)
+    print("posts:", posts[0])
+    content = client.fetch_post_content("THE-NAO-LA-DAC-NHAN-TAM-fbc")
+    print("content", content[:30], "...\n")
 
-    # posts = client.search_posts(book_name, page=1)
-    # print("posts:", posts[0])
-    # content = client.fetch_post_content("THE-NAO-LA-DAC-NHAN-TAM-fbc")
-    # print("content", content[:30], "...\n")
 
 
+    scraper = NewsScraper()
+    results = scraper.search_query_news(query=book_name, date_format="all")
+    print('results',results[0]['url'])
 
-    # scraper = NewsScraper()
-    # results = scraper.search_query_news(query=book_name, date_format="all")
-    # print('results',results[0]['url'])
-
-    # scraper = GoodreadsScraper()
+    scraper = GoodreadsScraper()
     
-    # book_data = scraper.crawl_book(book_name)
-    # if "error" not in book_data:
-    #     print(f"Book Details for {book_name}:")
-    #     print(f"Title: {book_data['title']}")
-    #     print(f"Author: {book_data['author']}")
-    #     print(f"Rating: {book_data['rating']}")
-    #     print(f"Description: {book_data['description'][:100]}...")
-    #     print("\nTop Reviews (translated to Vietnamese):")
-    #     for i, review in enumerate(book_data['top_reviews'], 1):
-    #         print(f"Review {i}: {review[:30]}...")
-    # else:
-    #     print(book_data["error"])
+    book_data = scraper.crawl_book(book_name)
+    if "error" not in book_data:
+        print(f"Book Details for {book_name}:")
+        print(f"Title: {book_data['title']}")
+        print(f"Author: {book_data['author']}")
+        print(f"Rating: {book_data['rating']}")
+        print(f"Description: {book_data['description'][:100]}...")
+        print("\nTop Reviews (translated to Vietnamese):")
+        for i, review in enumerate(book_data['top_reviews'], 1):
+            print(f"Review {i}: {review[:30]}...")
+    else:
+        print(book_data["error"])
 
     
