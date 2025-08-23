@@ -142,11 +142,11 @@ if __name__ == "__main__":
     config = read_config(path='config/test_config.yaml')
     test_audio_path = config['test_audio_path']  # Replace with actual Vietnamese audio file path
     test_script = config['test_script']  
-
-    # asyncio.run(generate_audio(text = test_script, config=config))
-    # print(f"Audio saved to {test_audio_path}")
-    from src.Utils.utils import read_txt_file
-    test_script = read_txt_file(path = "output/script.txt")[:600]
+    asyncio.run(generate_audio(text = test_script, config=config))
+    print(f"Audio saved to {test_audio_path}")
+    
+    # from src.Utils.utils import read_txt_file
+    # test_script = read_txt_file(path = "output/script.txt")[:600]
 
     config = read_config(path="config/config.yaml")
     generator = AudioGenerator(config)
