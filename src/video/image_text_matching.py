@@ -34,32 +34,54 @@ class ImageTextSimilarity:
         self.model = AutoModelForCausalLM.from_pretrained(
             self.config["base_model_path"],
             device_map=self.device,
-            torch_dtype=torch.float16,
+            torch_dtype=torch.bfloat16,
             trust_remote_code=self.config.get("trust_remote_code", True)
         )
         self.processor = AutoProcessor.from_pretrained(
             self.config["base_model_path"],
-            trust_remote_code=self.config.get("trust_remote_code", True)
+            trust_remote_code=self.config.get("trust_remote_code", True),
+            torch_dtype=torch.bfloat16,
         )
         self.processor.tokenizer.padding_side = self.config["padding_side"]
         self.processor.tokenizer.padding = self.config["padding"]
 
+    def get_new_size(self, img: Image.Image, target_height: int = 480) -> tuple:
+        """Calculate new image dimensions with target height, maintaining aspect ratio.
+        
+        Args:
+            img (Image.Image): Input PIL image.
+            target_height (int): Desired height (default: 720).
+            
+        Returns:
+            tuple: (new_width, new_height)
+        """
+        aspect_ratio = img.width / img.height
+        new_height = target_height
+        new_width = int(new_height * aspect_ratio)
+        return new_width, new_height
+
     def load_image(self, image_path: str) -> Image.Image:
-        """Load an image from a local path or URL.
+        """Load and resize an image to height=720 while maintaining aspect ratio.
         
         Args:
             image_path (str): Path or URL to the image.
             
         Returns:
-            Image.Image: Loaded PIL image.
+            Image.Image: Resized PIL image.
             
         Raises:
             Exception: If image loading fails.
         """
         if image_path.startswith('http'):
             response = requests.get(image_path)
-            return Image.open(BytesIO(response.content))
-        return Image.open(image_path)
+            img = Image.open(BytesIO(response.content))
+        else:
+            img = Image.open(image_path)
+        
+        # Get new dimensions and resize
+        new_width, new_height = self.get_new_size(img)
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        return img
     
     def _sort_key(self, item: Tuple[str, Optional[float]], sort: Literal['asc', 'des']) -> float:
         """Sort key function for image similarity results.
