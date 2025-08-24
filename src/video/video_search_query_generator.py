@@ -113,7 +113,7 @@ class VideoKeywordGenerator:
         for caption_idx, ((start, end), caption_text) in enumerate(captions):
             caption_text = self._normalize_text(caption_text)
             found = False
-            for i in range(j, min(j + 2, len(formatted))):
+            for i in range(j-1, min(j + 2, len(formatted))):
                 sentence = self._normalize_text(formatted[i][0])
                 if caption_text in sentence:
                     sentence_indices.append(i + 1)
