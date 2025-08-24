@@ -84,10 +84,12 @@ class SpiderPostClient:
         return results
 
     @timeit
-    def search_posts(self, search_text: str = "", page: int = 1) -> List[Dict]:
-        """Search posts by topic or fetch top posts if no search text provided."""
+    def search_posts(self, search_text: Optional[str] = None, page: int = 1) -> List[Dict]:
+        """Search posts by topic or fetch top posts if no search text or None."""
         try:
-            return self.fetch_by_topic(search_text, page) if search_text else self.fetch_top_posts(page)
+            if search_text is not None and search_text != "":
+                return self.fetch_by_topic(search_text, page)
+            return self.fetch_top_posts(page)
         except Exception as e:
             print(f"Search failed: {e}")
             return []
@@ -118,6 +120,17 @@ class SpiderPostClient:
             print(f"Fetch top posts failed: {e}")
             return []
             
+    def sort_posts(self, posts: List[Dict], key: Literal["comment_count", "views_count", "point"] = "views_count", 
+                   reverse: bool = True) -> List[Dict]:
+        """Sort posts by comment_count, views_count, or point."""
+
+        def _to_number(v: Optional[int], default: float = 0) -> float:
+            try:
+                return float(v) if v is not None else default
+            except (TypeError, ValueError):
+                return default
+
+        return sorted(posts, key=lambda x: _to_number(x.get(key)), reverse=reverse)
 
 class NewsScraper:
     '''

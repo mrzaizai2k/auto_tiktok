@@ -13,7 +13,6 @@ from src.tiktok_uploader.tiktok import upload_video
 from src.Utils.utils import read_config, check_path, read_txt_file
 
 
-topic = "sách Đắc Nhân Tâm" 
 
 config = read_config(path='config/config.yaml')
 output_audio_path = config['output_audio_path']
@@ -22,8 +21,8 @@ output_video_path = config['output_video_path']
 check_path(output_audio_path)
 check_path(output_video_path)
 
-# script_generator = ScriptGenerator(config)
-# script = script_generator.generate_script(topic)
+script_generator = ScriptGenerator(config)
+script = script_generator.generate_script()
 
 script = read_txt_file(path = 'output/script.txt')
 

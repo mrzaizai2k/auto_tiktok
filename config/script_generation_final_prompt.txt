@@ -1,14 +1,15 @@
-Viết lại kịch bản dưới đây theo đúng định dạng sau và rút gọn còn {number_of_words} từ.
+Nhiệm vụ: Viết lại kịch bản dưới đây theo đúng định dạng và rút gọn còn {number_of_words} từ.  
 
-- Chỉ viết phần giọng đọc của diễn viên lồng tiếng trong video.
-- Không thêm mô tả, không ghi tiêu đề, không viết chú thích.
-- Chỉ xuất ra đúng định dạng sau:
+Yêu cầu:  
+- Chỉ viết phần lời thoại (giọng đọc) của diễn viên lồng tiếng.  
+- Không thêm tiêu đề, không thêm mô tả, không chú thích, không icon, không ký tự đặc biệt.  
+- Đầu ra phải đúng định dạng sau:  
 
-script: <nội dung kịch bản sau khi rút gọn>
+script: <nội dung kịch bản sau khi rút gọn>  
 
-Ví dụ:
+Ví dụ:  
+script: Có người từng bỏ phố về quê, nhưng rau không mọc...  
+hoặc  
+script: Bạn có biết sách là cánh cửa mở ra những thế giới chưa từng bước vào?  
 
-script: Có người từng bỏ phố về quê, nhưng rau không mọc...
-hoặc
-script: Bạn có biết sách là cánh cửa mở ra những thế giới chưa từng bước vào?
-Đây là kịch bản gốc cần rút gọn:
+Dưới đây là kịch bản gốc cần rút gọn:  

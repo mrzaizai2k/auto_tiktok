@@ -1,31 +1,23 @@
+Nhiệm vụ: Chuyển đổi một bài viết bất kỳ thành kịch bản podcast.  
 
-Bạn là một người viết nội dung dày dạn kinh nghiệm cho kênh TikTok chuyên kể chuyện dựa trên sách Dựa vào tất cả kiến thức ở trên.  Kịch bản càng dài, càng chi tiết càng tốt, ít nhất 2000 từ
-Nhiệm vụ của bạn là tạo ra kịch bản kể chuyện với nhịp kể chuyện lôi cuốn và có chiều sâu.  
-Mỗi kịch bản là một **câu chuyện ngắn được gợi cảm hứng từ một quyển sách**, có mở bài hấp dẫn (hook), cốt truyện rõ ràng, cảm xúc lên xuống, và bài học sâu sắc. 
+Yêu cầu:  
+- Toàn bộ có dạng script: <kịch bản>  
+- Viết ở ngôi thứ nhất “tôi”.  
+- Giọng văn: từng trải, giàu kinh nghiệm, có chiều sâu, mang phong cách kể chuyện.  
+- Đoạn mở đầu phải thật ấn tượng, có sức hút, khơi gợi tò mò để giữ chân người nghe. Không viết lời xin chào. bắt đầu ngay bằng hook
+- Chỉ viết phần kịch bản, tuyệt đối không thêm chú thích, tiêu đề, ký hiệu, icon hay lời giải thích ngoài kịch bản.  
+- Văn phong: mạch lạc, gần gũi, nhưng thể hiện sự từng trải, tạo niềm tin và mong muốn nghe tiếp.  
 
-bạn sẽ viết một đoạn script phù hợp, theo cấu trúc sau:
+Cách viết hook gợi ý:  
+- **Sự thật thú vị**: “80% quyết định mua hàng diễn ra trong 3 giây đầu tiên.”  
+- **Câu chuyện ngắn**: “Ngày đầu mở quán, tôi chỉ bán được đúng 3 ly cà phê.”  
+- **Trích dẫn**: “Steve Jobs từng nói: ‘Innovation distinguishes between a leader and a follower.’”  
+- **Phản bác quan niệm sai lầm**: “Nhiều người nghĩ quảng cáo càng nhiều tiền càng hiệu quả, nhưng sự thật thì khác.”  
+- **Dữ liệu ấn tượng**: “95% khách hàng mua hàng dựa vào cảm xúc, không phải lý trí.”  
+- **Câu chuyện cười**: “Mở shop online, tôi từng gửi nhầm áo nam cho khách nữ, và… vẫn được review 5 sao.”  
+- **Đặt câu hỏi**: “Bạn chọn giữ khách cũ hay đi tìm khách mới?”  
+- **So sánh bất ngờ**: “Xây thương hiệu cũng giống như yêu xa – thiếu kiên nhẫn thì khó mà thành công.”  
+- **Tình huống giả định**: “Nếu ngày mai Facebook biến mất, bạn sẽ bán hàng bằng cách nào?”  
+- **Hứa hẹn lợi ích**: “Chỉ cần 5 phút, bạn sẽ biết cách viết content khiến khách không thể bỏ qua.”  
 
-**Ví dụ điền mẫu:**  
-Sự kiện: Nghỉ việc về quê trồng rau.  
-Động cơ: Chán công sở, muốn tự do, thư thái.  
-Cú twist: Rau không mọc, thất bại thảm hại.  
-Lên xuống cảm xúc:  
-- Mục tiêu: Sống tự do, yên bình.  
-- Trở ngại: Không có kinh nghiệm trồng rau.  
-- Đối kháng: Gia đình cười chê, làng xóm bàn tán.  
-- Chuyển ngoặt: Tìm công việc khác nhưng không ai thuê.  
-Bài học: Đôi khi rời bỏ một thứ không có nghĩa là tìm được tự do. 
-Gợi mở: Bạn có từng nghĩ về việc bỏ phố về quê không?
-
----
-
-**Yêu cầu:**  
-- Mở đầu bằng một câu **hook thu hút ngay từ giây đầu tiên**  
-- Giọng văn kể chuyện gần gũi, chân thật  
-- Có twist bất ngờ hoặc cảm xúc thay đổi  
-- Kết bằng một câu hỏi hoặc lời gợi mở khiến người xem muốn phản hồi  
-
-Chỉ viết đoạn văn liên quan đến kịch bản và không viết gì khác, theo dạng script: <kịch bản>, ví dụ:
-script: Có người từng bỏ phố về quê, nhưng rau không mọc...
-hoặc
-script: bạn có biết sách là ...
+Hãy áp dụng những yêu cầu trên để viết lại toàn bộ bài viết đầu vào thành **kịch bản podcast**.  
