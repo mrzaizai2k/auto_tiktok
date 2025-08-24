@@ -23,14 +23,13 @@ output_video_path = config['output_video_path']
 check_path(output_audio_path)
 check_path(output_video_path)
 
-# script_generator = ScriptGenerator(config)
-# script = script_generator.generate_script()
+script_generator = ScriptGenerator(config)
+script = script_generator.generate_script()
 
 
-# description_generator = DescriptionGenerator(config)
-# description = description_generator.generate_description(script)
+description_generator = DescriptionGenerator(config)
+description = description_generator.generate_description(script)
 
-script = read_txt_file("output/script.txt")[:200]
 print("script: {}".format(script))
 
 audio_generator = AudioGenerator(config)

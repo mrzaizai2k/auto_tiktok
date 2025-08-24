@@ -25,13 +25,10 @@ def validate_schedule_time(schedule_time_str):
         # Get current time
         now = datetime.now()
         
-        # If dt is in the past, adjust to today or next day
+        # If dt is in the past
         if dt < now:
-            # Keep same hour, minute, second
-            dt = now.replace(hour=dt.hour, minute=dt.minute, second=dt.second, microsecond=0)
-            # If time is earlier today, move to next day
-            if dt < now:
-                dt += timedelta(days=1)
+            print("[-] The scheduled time is earlier than the current time. Defaulting to 15 minutes from now.")
+            return 900
         
         # Calculate seconds difference
         seconds = int((dt - now).total_seconds())
