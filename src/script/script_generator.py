@@ -6,10 +6,11 @@ import os
 import random
 from typing import Dict
 from openai import OpenAI
+import random
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.script.crawl_data import SpiderPostClient, NewsScraper, GoodreadsScraper
+from src.script.crawl_data import SpiderPostClient
 from src.Utils.utils import read_txt_file
 
 class ScriptGenerator:
@@ -57,7 +58,10 @@ class ScriptGenerator:
         # SpiderPost: Select 1 post for topic
         client = SpiderPostClient()
         try:
-            posts = client.search_posts(search_text=self.topic, page = self.config.get('page', 1))
+            page  = self.config.get('page', None)
+            if page is None:
+                page = random.randint(1, 20)
+            posts = client.search_posts(search_text=self.topic, page = page)
             # Filter posts with content >= 500 words
             valid_posts = [p for p in posts if p.get("content") and len(p["content"].split()) >= 500]
             if valid_posts:

@@ -5,7 +5,7 @@ output_cache_path: &out_cache_path output/cache.csv
 
 script_generator:
   topic: null # Set to null to fetch for top posts, string for specific topic
-  page: 1 
+  page: null # can be integer to specify page number when topic is set, null to fetch random page 
 
   video_time_length: 300 # in seconds
   words_per_minute: 210
@@ -107,3 +107,20 @@ tiktok_uploader:
   proxy: null
   cookies_file: cookies/tiktok.json
   user_agent_default: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36
+
+
+logging:  
+  backupCount: 10 # delete log after 100 days
+  logfile: logs/auto_tiktok.log
+  when: midnight #rotate after a day
+  libraries:
+    PIL: WARNING
+    pytesseract: WARNING
+    pymongo: WARNING
+    urllib3: WARNING
+    requests: WARNING
+    openai: WARNING
+    httpx: WARNING
+    uvicorn: WARNING
+    httpcore: WARNING
+    multipart: WARNING
