@@ -1,4 +1,4 @@
-.logs/
+logs/
 venv/
 __pycache__/
 .DS_Store
@@ -14,3 +14,4 @@ notebook/
 cookies/
 cookies.txt
 src/tiktok_uploader/tiktok-signature/node_modules/
+*.log

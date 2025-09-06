@@ -12,25 +12,32 @@ from src.video.background_video_generator import VideoSearch
 from src.render.render_engine import VideoComposer
 from src.video.video_search_query_generator import VideoKeywordGenerator
 from src.tiktok_uploader.tiktok import upload_video
-from src.Utils.utils import read_config, check_path, read_txt_file
+from src.Utils.utils import read_config, check_path
+from src.Utils.logger import create_logger 
 
 
+config_path = 'config/config.yaml'
+logger = create_logger(config_path=config_path)
+logger.info(msg = "Loading config")
 
-config = read_config(path='config/config.yaml')
+config = read_config(path=config_path)
+logger.debug(msg = f"Config: {config}")
 output_audio_path = config['output_audio_path']
 output_video_path = config['output_video_path']
 
 check_path(output_audio_path)
 check_path(output_video_path)
 
+
+
 script_generator = ScriptGenerator(config)
 script = script_generator.generate_script()
-
+logger.debug(msg = f"Generated script:\n{script}")
 
 description_generator = DescriptionGenerator(config)
 description = description_generator.generate_description(script)
+logger.debug(msg = f"Generated description:\n{description}")
 
-print("script: {}".format(script))
 
 audio_generator = AudioGenerator(config)
 try:
@@ -42,6 +49,7 @@ gc.collect()
 if torch.cuda.is_available():
     torch.cuda.empty_cache()
 
+logger.debug(msg = f"Successfully Generated audio at {audio_path}")
 
 caption_generator = CaptionGenerator(config)
 timed_captions = caption_generator.generate_timed_captions(audio_filename=audio_path, script_text=script)
@@ -50,20 +58,20 @@ gc.collect()
 if torch.cuda.is_available():
     torch.cuda.empty_cache()
 
-print("timed_captions:\n",timed_captions)
+logger.debug(msg = f"Generated timed_captions:\n{timed_captions}")
 
 keyword_generator = VideoKeywordGenerator(config)
 search_terms = keyword_generator.get_video_search_queries(script=script, captions=timed_captions)
-print("search_terms:\n",search_terms)
 
+logger.debug(msg = f"Generated search_terms:\n{search_terms}")
 
 background_video_urls = None
 if search_terms is not None:
     video_search = VideoSearch(config)
     background_video_urls = video_search.generate_video_urls(search_terms)
-    print("background_video_urls\n",background_video_urls)
+    logger.debug(msg = f"Generated background_video_urls:\n{background_video_urls}")
 else:
-    print("No background video")
+    logger.warning(msg = "No search terms generated, skipping video search")
 
 del video_search
 gc.collect()
@@ -77,10 +85,9 @@ if background_video_urls is not None:
         audio_file_path=output_audio_path,
         timed_captions=timed_captions
     )
-
-    print(video)
+    logger.debug(msg = f"Video: {video}")
 else:
-    print("No video")
+    logger.warning(msg = "No background video URLs generated, skipping video composition")
 
 
 if video:
@@ -88,6 +95,6 @@ if video:
     success = upload_video(config)
     
     if success:
-        print("Video uploaded successfully!")
+        logger.info(msg = "Video uploaded successfully!")
     else:
-        print("Failed to upload video.")
+        logger.error(msg = "Failed to upload video.")
