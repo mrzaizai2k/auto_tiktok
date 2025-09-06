@@ -6,6 +6,7 @@ import requests
 import json
 import os
 import uuid
+import pandas as pd
 from datetime import datetime, timedelta
 
 from fake_useragent import FakeUserAgentError, UserAgent
@@ -18,32 +19,118 @@ from src.Utils.utils import load_cookies_from_file, read_txt_file
 
 load_dotenv()
 
-def validate_schedule_time(schedule_time_str):
-    try:
-        # Parse string to datetime
-        dt = datetime.strptime(schedule_time_str, "%Y-%d-%m %H:%M:%S")
-        # Get current time
-        now = datetime.now()
-        
-        # If dt is in the past
-        if dt < now:
-            print("[-] The scheduled time is earlier than the current time. Defaulting to 15 minutes from now.")
-            return 900
-        
-        # Calculate seconds difference
-        seconds = int((dt - now).total_seconds())
-        
-        # Validate and adjust seconds
+
+
+def init_cache(cache_path):
+    """Ensure cache CSV exists"""
+    CACHE_COLUMNS = ["description", "schedule_time"]
+    if not os.path.exists(cache_path):
+        df = pd.DataFrame(columns=CACHE_COLUMNS)
+        df.to_csv(cache_path, index=False)
+    return cache_path
+
+def read_cache(cache_path):
+    init_cache(cache_path)
+    return pd.read_csv(cache_path)
+
+def write_cache(cache_path, description, schedule_time):
+    df = read_cache(cache_path)
+    new_row = {"description": description, "schedule_time": schedule_time}
+    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    df.to_csv(cache_path, index=False)
+
+
+def find_next_slot(slots, cache_path, busy_window=600):
+    """
+    Find next available slot from slots list using cache.
+    - Checks slots in order for the same day.
+    - If all slots busy, moves to next day.
+    - busy_window: seconds (default 600s = ±10 minutes)
+    """
+
+    # Read cache
+    schedule_df = read_cache(cache_path) 
+
+    now = datetime.now()
+    scheduled_times = [
+        datetime.strptime(t, "%Y-%d-%m %H:%M:%S")
+        for t in schedule_df.get("schedule_time", []).astype(str)
+        if t
+    ]
+
+    for days_ahead in range(9):  # Search up to 1 week ahead
+        day = now + timedelta(days=days_ahead)
+        for slot in slots:
+            # Normalize slot to HH:MM
+            slot_str = str(slot).strip()
+            
+            try:
+                slot_time = datetime.strptime(slot_str, "%H:%M").time()
+                candidate = datetime.combine(day.date(), slot_time)
+            except ValueError:
+                continue
+
+            # Skip past times for today
+            if candidate < now:
+                continue
+
+            # Check for conflicts within busy window
+            is_busy = False
+            for scheduled_time in scheduled_times:
+                time_difference_seconds = abs((candidate - scheduled_time).total_seconds())
+                if time_difference_seconds <= busy_window:
+                    is_busy = True
+                    break
+            if is_busy:
+                continue
+
+            return candidate
+
+    return None
+
+def validate_schedule_time(schedule_time, cache_path, description=""):
+    """
+    Handle schedule_time as:
+    - str: 'YYYY-dd-mm HH:MM:SS'
+    - None: default 15 mins
+    - list: ['8:00','16:00'] -> use cache
+    Return: seconds offset from now, or False if invalid
+    """
+    now = datetime.now()
+
+    if schedule_time is None:
+        return 900  # default
+
+    # case: list of slots
+    if isinstance(schedule_time, list):
+        slot_dt = find_next_slot(schedule_time, cache_path)
+        if not slot_dt:
+            print("[-] No available slot in 7 days")
+            return False
+        seconds = int((slot_dt - now).total_seconds())
         if seconds < 900:
-            print("[-] Cannot schedule video in less than 15 minutes")
+            seconds = 900
+        print(f"[+] Scheduled by slot: {slot_dt}")
+        return seconds
+
+    # case: explicit datetime string
+    try:
+        dt = datetime.strptime(schedule_time, "%Y-%d-%m %H:%M:%S")
+        if dt < now:
+            print("[-] The scheduled time is earlier than now. Defaulting to 15 mins.")
+            return 900
+        seconds = int((dt - now).total_seconds())
+        if seconds < 900:
+            print("[-] Cannot schedule in less than 15 mins")
             return 900
         elif seconds > 864000:
-            print("[-] Cannot schedule video in more than 10 days")
+            print("[-] Cannot schedule in more than 10 days")
             return 864000
         return seconds
     except ValueError:
         print("[-] Invalid date format. Use YYYY-dd-mm HH:MM:SS")
         return False
+
 
 def upload_video(config):
     """Upload video to TikTok"""
@@ -59,6 +146,7 @@ def upload_video(config):
     proxy = uploader_config.get('proxy')
     cookies_file = uploader_config.get('cookies_file', "cookies/tiktok.json")
     user_agent_default = uploader_config.get('user_agent_default')
+    cache_path = uploader_config.get('output_cache_path', "output/cache.csv")
     
     try:
         user_agent = UserAgent().random
@@ -83,9 +171,14 @@ def upload_video(config):
     
     print("Uploading video...")
     
-    schedule_time = validate_schedule_time(schedule_time_str=schedule_time) # has to be in seconds
 
     description = read_txt_file(path = description_path)[:2200] #The description has to be less than 2200 characters
+
+    schedule_time = validate_schedule_time(
+        schedule_time=schedule_time,
+        cache_path=cache_path,
+        description=description
+    )
 
     # Parameter validation
     if schedule_time != 0 and visibility_type == 1:
@@ -245,6 +338,8 @@ def upload_video(config):
             return False
 
         if r.json()["status_code"] == 0:
+            scheduled_dt = (datetime.now() + timedelta(seconds=schedule_time)).strftime("%Y-%d-%m %H:%M:%S") if schedule_time else datetime.now().strftime("%Y-%d-%m %H:%M:%S")
+            write_cache(cache_path, description, scheduled_dt)
             print(f"Published successfully {'| Scheduled for ' + str(schedule_time) if schedule_time else ''}")
             uploaded = True
             break
